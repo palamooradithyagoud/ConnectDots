@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Shield, UploadCloud, Database, MapPin, BarChart3, Activity, Sparkles } from "lucide-react";
+import { Shield, UploadCloud, Database, MapPin, BarChart3, Activity, Sparkles, TrendingUp } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export default function Navbar() {
   const navItems = [
     { label: "Overview", href: "/", icon: BarChart3 },
     { label: "Crime Explorer", href: "/crimes", icon: Database },
+    { label: "Analytics", href: "/analytics", icon: TrendingUp },
     { label: "Semantic Search", href: "/search", icon: Sparkles },
     { label: "Ingestion Pipeline", href: "/import", icon: UploadCloud },
     { label: "Spatial Map", href: "/map", icon: MapPin },
@@ -36,7 +37,7 @@ export default function Navbar() {
               Connect<span className="text-brand">Dots</span>
             </span>
             <span className="text-[0.62rem] font-bold tracking-[0.2em] text-white/50 uppercase">
-              AI Crime Intelligence · Phase 1
+              AI Crime Intelligence · Phase 3
             </span>
           </div>
         </Link>

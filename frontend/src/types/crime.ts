@@ -169,3 +169,131 @@ export interface NlpStatsResponse {
   embedding_model: string;
 }
 
+// ─── Phase 3: ML & Pattern Analysis ─────────────────────────────────────────
+
+export interface ClusterRecord {
+  id: string;
+  cluster_type: "spatial" | "semantic";
+  cluster_label: number;
+  crime_count: number;
+  centroid_lat?: number | null;
+  centroid_lon?: number | null;
+  metadata?: {
+    dominant_category?: string;
+    category_distribution?: Record<string, number>;
+    representative_crime_ids?: string[];
+    time_range_start?: string;
+    time_range_end?: string;
+    bounding_box?: { min_lat: number; max_lat: number; min_lon: number; max_lon: number };
+    locations?: string[];
+    [key: string]: any;
+  } | null;
+  crime_ids?: string[] | null;
+  created_at: string;
+}
+
+export interface ClusterListResponse {
+  total: number;
+  items: ClusterRecord[];
+}
+
+export interface HotspotRecord {
+  id: string;
+  crime_count: number;
+  density_score?: number | null;
+  primary_category?: string | null;
+  date_range_start?: string | null;
+  date_range_end?: string | null;
+  centroid_lat?: number | null;
+  centroid_lon?: number | null;
+  source_cluster_id?: string | null;
+  metadata?: {
+    area_km2?: number;
+    convex_hull_wkt?: string;
+    bounding_box?: { min_lat: number; max_lat: number; min_lon: number; max_lon: number };
+    locations?: string[];
+    [key: string]: any;
+  } | null;
+  created_at: string;
+}
+
+export interface HotspotListResponse {
+  total: number;
+  items: HotspotRecord[];
+}
+
+export interface TrendRecord {
+  id: string;
+  period: string;
+  period_type: string;
+  category?: string | null;
+  crime_count: number;
+  rolling_average?: number | null;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface TrendListResponse {
+  total: number;
+  period_type?: string | null;
+  items: TrendRecord[];
+}
+
+export interface AnomalyRecord {
+  id: string;
+  crime_id?: string | null;
+  anomaly_type: "statistical" | "spatial" | "temporal";
+  anomaly_score?: number | null;
+  baseline_value?: number | null;
+  observed_value?: number | null;
+  period?: string | null;
+  explanation: string;
+  category?: string | null;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface AnomalyListResponse {
+  total: number;
+  items: AnomalyRecord[];
+}
+
+export interface PatternRecord {
+  id: string;
+  pattern_type: string;
+  category?: string | null;
+  description: string;
+  confidence?: number | null;
+  evidence: string[];
+  metadata?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface PatternListResponse {
+  total: number;
+  items: PatternRecord[];
+}
+
+export interface MlJobStatus {
+  job_id: string;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+  analyses?: string[] | null;
+  result_summary?: Record<string, any> | null;
+  error_message?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+}
+
+export interface MlStatsResponse {
+  total_crimes_analyzed: number;
+  total_clusters: number;
+  spatial_clusters: number;
+  semantic_clusters: number;
+  total_hotspots: number;
+  total_anomalies: number;
+  total_patterns: number;
+  trend_records: number;
+  last_analysis_at?: string | null;
+  last_job_id?: string | null;
+}

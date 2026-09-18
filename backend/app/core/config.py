@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ConnectDots - AI Crime Analysis System"
-    VERSION: str = "1.0.0"
+    VERSION: str = "3.0.0"
     API_V1_STR: str = "/api/v1"
     
     # Database
@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     QDRANT_STORAGE_PATH: str = "./qdrant_storage"
     NLP_CONFIDENCE_THRESHOLD: float = 0.60
     NLP_BATCH_SIZE: int = 50
+
+    # Phase 3: ML & Crime Pattern Analysis
+    ML_DBSCAN_EPS_KM: float = 1.0            # Spatial DBSCAN epsilon in kilometres
+    ML_DBSCAN_MIN_SAMPLES: int = 2           # Minimum cluster size (lowered for small datasets)
+    ML_SEMANTIC_DBSCAN_EPS: float = 0.5     # Semantic clustering epsilon (cosine-normalized)
+    ML_ANOMALY_CONTAMINATION: float = 0.15  # Isolation Forest contamination rate
+    ML_ROLLING_WINDOW_WEEKS: int = 4        # Rolling average window in periods
 
     model_config = SettingsConfigDict(
         env_file=".env",
