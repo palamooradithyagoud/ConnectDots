@@ -1,0 +1,16 @@
+record_id,crime_type,location,date,time,latitude,longitude,description,source
+CR-2026-001,THEFT,Commercial Street,2026-03-01,14:30:00,12.9716,77.5946,Theft of mobile phone from electronics store,Bangalore Central Police
+CR-2026-002,BURGLARY,Indiranagar 100ft Road,2026-03-02,02:15:00,12.9784,77.6408,Break-in at retail showroom overnight,Indiranagar Station
+CR-2026-003,ASSAULT,Koramangala 5th Block,2026-03-02,21:45:00,12.9352,77.6245,Physical altercation outside restaurant,Koramangala Station
+CR-2026-004,ROBBERY,MG Road Metro,2026-03-03,19:10:00,12.9754,77.6066,Snatching of purse with weapon threat,Cubbon Park Station
+CR-2026-005,FRAUD,Whitefield Tech Park,2026-03-04,11:00:00,12.9698,77.7499,Unauthorized ATM debit card skimming,Cyber Crime Division
+CR-2026-006,VANDALISM,Brigade Road,2026-03-04,23:30:00,12.9733,77.6074,Damage to public transit signage and bus shelter,Ashok Nagar Station
+CR-2026-007,VEHICLE THEFT,HSR Layout Sector 2,2026-03-05,04:20:00,12.9116,77.6389,Motorcycle stolen from residential driveway,HSR Layout Station
+CR-2026-008,NARCOTICS,Electronic City Phase 1,2026-03-05,17:50:00,12.8452,77.6602,Possession of illicit synthetic substances,Narcotics Cell
+CR-2026-009,HOMICIDE,Jayanagar 4th Block,2026-03-06,22:15:00,12.9299,77.5833,Fatal assault during attempted burglary,Jayanagar Station
+CR-2026-010,CYBERCRIME,Bellandur ORR,2026-03-07,10:30:00,12.9304,77.6784,Phishing scam targeting corporate bank accounts,Cyber Crime Division
+CR-2026-011,THEFT,Malleshwaram 8th Cross,2026-03-07,15:40:00,12.9966,77.5713,Bicycle stolen from apartment complex rack,Malleshwaram Station
+CR-2026-012,BURGLARY,BTM Layout 2nd Stage,2026-03-08,03:10:00,12.9166,77.6101,"Jewelry shop alarm triggered, forced entry",Mico Layout Station
+CR-2026-013,ASSAULT,Hebbal Flyover Junction,2026-03-08,20:00:00,13.0358,77.5970,Road rage confrontation on highway ramp,Hebbal Traffic Police
+CR-2026-014,ROBBERY,Rajajinagar 1st Block,2026-03-09,18:45:00,12.9982,77.5530,Armed robbery at convenience store cash register,Rajajinagar Station
+CR-2026-015,FRAUD,Marathahalli Bridge,2026-03-10,13:20:00,12.9591,77.6974,Fake job consultancy collecting cash upfront,Marathahalli Station

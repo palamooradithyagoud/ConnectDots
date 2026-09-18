@@ -1,0 +1,11 @@
+record_id,crime_type,location,date,time,latitude,longitude,description,source
+CR-2026-101,THEFT,Commercial Street,2026-03-01,14:30:00,12.9716,77.5946,Valid theft record,Bangalore Central
+CR-2026-102,BURGLARY,Indiranagar,2026-03-02,02:15:00,999.0,77.6408,Invalid latitude (999.0 is out of bounds),Indiranagar Station
+CR-2026-103,ASSAULT,,2026-03-02,21:45:00,12.9352,77.6245,Missing location name,Koramangala Station
+CR-2026-104,,MG Road Metro,2026-03-03,19:10:00,12.9754,77.6066,Missing crime type,Cubbon Park Station
+CR-2026-105,FRAUD,Whitefield,INVALID-DATE,11:00:00,12.9698,77.7499,Malformed unparseable date,Cyber Crime Division
+CR-2026-101,THEFT,Commercial Street,2026-03-01,14:30:00,12.9716,77.5946,Duplicate record_id in same batch,Bangalore Central
+CR-2026-107,ROBBERY,Brigade Road,2026-03-04,23:30:00,12.9733,-999.9,Invalid longitude (-999.9),Ashok Nagar Station
+CR-2026-108,VEHICLE THEFT,HSR Layout,2026-03-05,04:20:00,12.9116,77.6389,Valid motorcycle theft record,HSR Layout Station
+CR-2026-109,PETTY LARCENY,Jayanagar 4th Block,03/06/2026,10:15 PM,12.9299,77.5833,Inconsistent crime name and US date format,Jayanagar Station
+CR-2026-110,CYBERCRIME,Bellandur,2026-03-07,10:30:00,0.0,0.0,Null island coordinates (0.0 0.0),Cyber Crime Division

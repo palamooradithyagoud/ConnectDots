@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-brand: #5227ff;
+  --color-brand-accent: #B19EEF;
+  --background: #07070e;
+  --foreground: #f8fafc;
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d0d1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #252538;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5227ff;
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(17, 17, 26, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(82, 39, 255, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(82, 39, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+/* Metallic Silver Button from Innovators Conclave */
+.btn-metallic {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 50%, #94a3b8 100%);
+  color: #020618;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(148, 163, 184, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-metallic:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 50%, #cbd5e1 100%);
+  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.25);
+}
+
+.btn-metallic:active {
+  transform: scale(0.96);
+}
+
+/* Solid Brand Button */
+.btn-brand {
+  background-color: #5227ff;
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.btn-brand:hover {
+  opacity: 0.9;
+  box-shadow: 0 0 20px rgba(82, 39, 255, 0.4);
+}
+
+.btn-brand:active {
+  transform: scale(0.96);
+}
+
+/* Leaflet Map popup customization */
+.leaflet-popup-content-wrapper {
+  background: #11111a !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.8) !important;
+}
+
+.leaflet-popup-tip {
+  background: #11111a !important;
+}
