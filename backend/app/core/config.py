@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ConnectDots - AI Crime Analysis System"
-    VERSION: str = "3.0.0"
+    VERSION: str = "4.0.0"
     API_V1_STR: str = "/api/v1"
     
     # Database
@@ -56,6 +56,37 @@ class Settings(BaseSettings):
     ML_SEMANTIC_DBSCAN_EPS: float = 0.5     # Semantic clustering epsilon (cosine-normalized)
     ML_ANOMALY_CONTAMINATION: float = 0.15  # Isolation Forest contamination rate
     ML_ROLLING_WINDOW_WEEKS: int = 4        # Rolling average window in periods
+
+    # Phase 4: Knowledge Graph (Neo4j Aura) & LLM Investigation Intelligence
+    NEO4J_URI: str = "neo4j+s://REDACTED.databases.neo4j.io"
+    NEO4J_USER: str = "neo4j"
+    NEO4J_USERNAME: Union[str, None] = None
+    NEO4J_PASSWORD: str = "REDACTED_PASSWORD"
+    NEO4J_DATABASE: str = "neo4j"
+    AURA_INSTANCEID: Union[str, None] = None
+    AURA_INSTANCENAME: Union[str, None] = None
+
+    @field_validator("NEO4J_USER", mode="after")
+    @classmethod
+    def resolve_neo4j_user(cls, v: str) -> str:
+        return v
+
+    def model_post_init(self, __context):
+        if self.NEO4J_USERNAME and (not self.NEO4J_USER or self.NEO4J_USER == "neo4j"):
+            self.NEO4J_USER = self.NEO4J_USERNAME
+
+    # LLM Provider Abstraction
+    LLM_PROVIDER: str = "openai"            # "openai" | "mock"
+    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_API_KEY: Union[str, None] = None
+    LLM_TEMPERATURE: float = 0.1
+    LLM_MAX_TOKENS: int = 1500
+
+    # Graph RAG & Investigation
+    GRAPH_TRAVERSAL_MAX_DEPTH: int = 2
+    GRAPH_RAG_TOP_K_SEMANTIC: int = 5
+    GRAPH_RAG_SIMILARITY_THRESHOLD: float = 0.60
+    GRAPH_AUTO_SYNC_ON_STARTUP: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

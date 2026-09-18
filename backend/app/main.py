@@ -65,7 +65,7 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 def root():
     return {
         "system": settings.PROJECT_NAME,
-        "phase": "Phase 1: Data Collection & Preprocessing",
+        "phase": "Phase 4: Knowledge Graph + Graph RAG + LLM Investigation Intelligence",
         "documentation": "/docs",
         "health": f"{settings.API_V1_STR}/health"
     }

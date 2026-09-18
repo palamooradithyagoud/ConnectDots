@@ -1,0 +1,365 @@
+"""
+Phase 4: Knowledge Graph Synchronization Orchestrator
+Coordinates the synchronization of:
+  PostgreSQL (Authoritative Source Truth)
+       ↓
+  Phase 2 NLP Entities & Modus Operandi (Explicit facts)
+       ↓
+  Phase 3 ML Clusters & Discovered Patterns (Derived artifacts)
+       ↓
+  Neo4j Knowledge Graph (Relationship Layer)
+
+Mandatory rules:
+1. Relationships extracted directly from the crime text receive confidence_type = 'explicit'.
+2. Relationships synthesized from analytical signals receive confidence_type = 'derived'.
+3. Graph sync is completely idempotent: multiple executions will not duplicate nodes or edges.
+"""
+import logging
+from collections import defaultdict
+from typing import Dict, Any, List, Optional, Set, Tuple
+from sqlalchemy.orm import Session
+
+from app.models.crime import Crime
+from app.models.nlp_analysis import NlpAnalysis
+from app.models.ml_models import CrimeCluster, CrimeClusterMember, CrimePattern
+from app.services.neo4j_service import Neo4jService
+from app.services.graph_ready_service import GraphReadyService
+from app.services.embedding_service import EmbeddingService
+from app.services.qdrant_service import QdrantService
+from app.core.config import settings
+
+logger = logging.getLogger("connectdots_graph_sync")
+
+
+class GraphSyncService:
+    """
+    Synchronizes PostgreSQL, NLP extractions, and Phase 3 ML patterns into the Neo4j Graph.
+    """
+
+    @classmethod
+    def sync_all(cls, db: Session) -> Dict[str, Any]:
+        """
+        Main synchronization pipeline:
+        1. Ensure graph schema constraints
+        2. Sync Crime nodes and NLP entity subgraphs (explicit)
+        3. Sync Phase 3 clusters (derived)
+        4. Sync Phase 3 multi-signal patterns (derived)
+        5. Generate derived crime-to-crime relationships (shared entities, clusters, semantics)
+        """
+        logger.info("Starting Graph Synchronization...")
+        Neo4jService.init_schema()
+
+        crimes_synced = 0
+        entities_synced = 0
+        explicit_rels = 0
+        derived_rels = 0
+
+        # 1. Fetch all crimes and their NLP analyses
+        crimes = db.query(Crime).all()
+        crime_map: Dict[str, Crime] = {c.id: c for c in crimes}
+
+        nlp_records = db.query(NlpAnalysis).all()
+        nlp_map: Dict[str, NlpAnalysis] = {n.crime_id: n for n in nlp_records}
+
+        # Track entities for crime-to-crime overlap analysis
+        entity_to_crimes: Dict[str, Set[str]] = defaultdict(set)
+        entity_type_map: Dict[str, str] = {}
+        entity_name_map: Dict[str, str] = {}
+
+        # 2. Sync Crime nodes and Explicit NLP entities
+        for crime in crimes:
+            crime_node_data = {
+                "id": crime.id,
+                "record_id": crime.record_id,
+                "category": crime.category,
+                "occurred_at": crime.occurred_at.isoformat() if crime.occurred_at else None,
+                "location_name": crime.location_name,
+                "description": crime.description,
+                "source": crime.source,
+                "latitude": crime.latitude,
+                "longitude": crime.longitude,
+            }
+            Neo4jService.upsert_crime(crime_node_data)
+            crimes_synced += 1
+
+            crime_node_id = f"crime:{crime.id}"
+            nlp = nlp_map.get(crime.id)
+
+            if nlp:
+                # Use stored graph_ready_payload if available or generate fresh
+                payload = nlp.graph_ready_payload
+                if not payload or not isinstance(payload, dict) or "nodes" not in payload:
+                    entities_dict = {
+                        "weapons": nlp.extracted_weapons or [],
+                        "vehicles": nlp.extracted_vehicles or [],
+                        "locations": nlp.extracted_locations or [],
+                        "persons": nlp.extracted_persons or [],
+                        "organizations": [],
+                    }
+                    mo_list = nlp.modus_operandi or []
+                    payload = GraphReadyService.generate_graph_payload(
+                        crime_id=crime.id,
+                        record_id=crime.record_id,
+                        category=crime.category,
+                        occurred_at=crime.occurred_at.isoformat() if crime.occurred_at else "",
+                        entities=entities_dict,
+                        modus_operandi=mo_list
+                    )
+
+                # Upsert entity nodes and explicit relationships
+                for node in payload.get("nodes", []):
+                    n_label = node.get("label")
+                    n_id = node.get("id")
+                    if n_label == "Crime" or not n_id:
+                        continue
+
+                    # Canonicalize entity label
+                    if n_label == "PersonOfInterest":
+                        n_label = "Person"
+
+                    Neo4jService.upsert_entity(
+                        label=n_label,
+                        entity_id=n_id,
+                        properties=node.get("properties", {})
+                    )
+                    entities_synced += 1
+
+                    # Track for cross-crime entity sharing
+                    entity_to_crimes[n_id].add(crime.id)
+                    entity_type_map[n_id] = n_label
+                    entity_name_map[n_id] = (
+                        node.get("properties", {}).get("name")
+                        or node.get("properties", {}).get("pattern")
+                        or node.get("properties", {}).get("description")
+                        or n_id
+                    )
+
+                for rel in payload.get("relationships", []):
+                    rel_type = rel.get("relation")
+                    target_id = rel.get("target")
+                    if rel_type and target_id:
+                        # Remap TARGETED_ESTABLISHMENT to INVOLVES_ORGANIZATION if needed
+                        if rel_type == "TARGETED_ESTABLISHMENT":
+                            rel_type = "INVOLVES_ORGANIZATION"
+
+                        Neo4jService.create_relationship(
+                            source_id=crime_node_id,
+                            rel_type=rel_type,
+                            target_id=target_id,
+                            properties={"source": "nlp_extraction"},
+                            confidence_type="explicit"
+                        )
+                        explicit_rels += 1
+
+        # 3. Sync Phase 3 Clusters (Derived)
+        clusters = db.query(CrimeCluster).all()
+        cluster_members = db.query(CrimeClusterMember).all()
+        cluster_membership_map: Dict[str, Set[str]] = defaultdict(set)
+        for m in cluster_members:
+            cluster_membership_map[m.cluster_id].add(m.crime_id)
+
+        for cluster in clusters:
+            cluster_node_id = f"cluster:{cluster.id}"
+            cluster_props = {
+                "id": cluster.id,
+                "cluster_type": cluster.cluster_type,
+                "cluster_label": cluster.cluster_label,
+                "crime_count": cluster.crime_count,
+                "centroid_lat": cluster.centroid_lat,
+                "centroid_lon": cluster.centroid_lon,
+            }
+            Neo4jService.upsert_entity(
+                label="CrimeCluster",
+                entity_id=cluster_node_id,
+                properties=cluster_props
+            )
+            entities_synced += 1
+
+            member_crime_ids = cluster_membership_map.get(cluster.id, set())
+            for c_id in member_crime_ids:
+                Neo4jService.create_relationship(
+                    source_id=f"crime:{c_id}",
+                    rel_type="BELONGS_TO",
+                    target_id=cluster_node_id,
+                    properties={
+                        "source": f"phase3_{cluster.cluster_type}_clustering",
+                        "cluster_type": cluster.cluster_type
+                    },
+                    confidence_type="derived"
+                )
+                derived_rels += 1
+
+        # 4. Sync Phase 3 Patterns (Derived)
+        patterns = db.query(CrimePattern).all()
+        for pat in patterns:
+            pat_node_id = f"pattern:{pat.id}"
+            pat_props = {
+                "id": pat.id,
+                "pattern_type": pat.pattern_type,
+                "category": pat.category,
+                "description": pat.description,
+                "confidence": float(pat.confidence or 1.0),
+            }
+            Neo4jService.upsert_entity(
+                label="Pattern",
+                entity_id=pat_node_id,
+                properties=pat_props
+            )
+            entities_synced += 1
+
+            evidence_ids = pat.evidence if isinstance(pat.evidence, list) else []
+            for c_id in evidence_ids:
+                if c_id in crime_map:
+                    Neo4jService.create_relationship(
+                        source_id=f"crime:{c_id}",
+                        rel_type="SUPPORTS",
+                        target_id=pat_node_id,
+                        properties={
+                            "source": "phase3_pattern_synthesis",
+                            "pattern_type": pat.pattern_type,
+                            "confidence": float(pat.confidence or 1.0)
+                        },
+                        confidence_type="derived"
+                    )
+                    derived_rels += 1
+
+        # 5. Build Derived Crime-to-Crime Relationships
+        # A. Shared Entities: Vehicles, Weapons, M.O., Locations
+        derived_pairs_seen: Set[Tuple[str, str, str]] = set()
+
+        for entity_id, c_ids in entity_to_crimes.items():
+            if len(c_ids) < 2:
+                continue
+            e_type = entity_type_map.get(entity_id, "")
+            e_name = entity_name_map.get(entity_id, entity_id)
+
+            rel_type = None
+            if e_type == "Vehicle":
+                rel_type = "SHARES_VEHICLE"
+            elif e_type == "Weapon":
+                rel_type = "SHARES_WEAPON"
+            elif e_type == "ModusOperandi":
+                rel_type = "SHARES_MO"
+            elif e_type == "Location":
+                rel_type = "SAME_LOCATION"
+
+            if not rel_type:
+                continue
+
+            sorted_crimes = sorted(list(c_ids))
+            for i in range(len(sorted_crimes)):
+                for j in range(i + 1, len(sorted_crimes)):
+                    c1, c2 = sorted_crimes[i], sorted_crimes[j]
+                    pair_key = (c1, c2, rel_type)
+                    if pair_key in derived_pairs_seen:
+                        continue
+                    derived_pairs_seen.add(pair_key)
+
+                    # Bidirectional edge creation
+                    edge_props = {
+                        "source": f"shared_{e_type.lower()}",
+                        "entity_id": entity_id,
+                        "entity_name": e_name,
+                        "confidence": 1.0 if rel_type != "SHARES_MO" else 0.95
+                    }
+                    Neo4jService.create_relationship(
+                        source_id=f"crime:{c1}",
+                        rel_type=rel_type,
+                        target_id=f"crime:{c2}",
+                        properties=edge_props,
+                        confidence_type="derived"
+                    )
+                    Neo4jService.create_relationship(
+                        source_id=f"crime:{c2}",
+                        rel_type=rel_type,
+                        target_id=f"crime:{c1}",
+                        properties=edge_props,
+                        confidence_type="derived"
+                    )
+                    derived_rels += 2
+
+        # B. Same Cluster relationships
+        for cluster_id, c_ids in cluster_membership_map.items():
+            if len(c_ids) < 2:
+                continue
+            sorted_crimes = sorted(list(c_ids))
+            # Limit dense pairing if cluster is very large
+            max_pairs = min(len(sorted_crimes), 10)
+            for i in range(max_pairs):
+                for j in range(i + 1, max_pairs):
+                    c1, c2 = sorted_crimes[i], sorted_crimes[j]
+                    pair_key = (c1, c2, "SAME_CLUSTER")
+                    if pair_key in derived_pairs_seen:
+                        continue
+                    derived_pairs_seen.add(pair_key)
+
+                    edge_props = {
+                        "source": "cluster_co_membership",
+                        "cluster_id": cluster_id,
+                        "confidence": 0.85
+                    }
+                    Neo4jService.create_relationship(
+                        source_id=f"crime:{c1}",
+                        rel_type="SAME_CLUSTER",
+                        target_id=f"crime:{c2}",
+                        properties=edge_props,
+                        confidence_type="derived"
+                    )
+                    Neo4jService.create_relationship(
+                        source_id=f"crime:{c2}",
+                        rel_type="SAME_CLUSTER",
+                        target_id=f"crime:{c1}",
+                        properties=edge_props,
+                        confidence_type="derived"
+                    )
+                    derived_rels += 2
+
+        # C. Semantic Similarity from Qdrant (top matches above threshold)
+        try:
+            for crime in crimes[:25]:  # Bounded for performance
+                query_vec = EmbeddingService.generate_embedding(crime.description or crime.category)
+                results = QdrantService.search_similar_crimes(
+                    query_vector=query_vec,
+                    limit=3,
+                    score_threshold=settings.GRAPH_RAG_SIMILARITY_THRESHOLD
+                )
+                for res in results:
+                    other_id = res.get("crime_id")
+                    score = float(res.get("score", 0.0))
+                    if other_id and other_id != crime.id and other_id in crime_map:
+                        pair_key = (min(crime.id, other_id), max(crime.id, other_id), "SEMANTICALLY_SIMILAR")
+                        if pair_key in derived_pairs_seen:
+                            continue
+                        derived_pairs_seen.add(pair_key)
+
+                        edge_props = {
+                            "source": "qdrant_embeddings",
+                            "confidence": round(score, 4),
+                            "similarity_score": round(score, 4)
+                        }
+                        Neo4jService.create_relationship(
+                            source_id=f"crime:{crime.id}",
+                            rel_type="SEMANTICALLY_SIMILAR",
+                            target_id=f"crime:{other_id}",
+                            properties=edge_props,
+                            confidence_type="derived"
+                        )
+                        derived_rels += 1
+        except Exception as e:
+            logger.warning(f"Semantic similarity graph link skipped: {e}")
+
+        stats = Neo4jService.get_stats()
+        logger.info(
+            f"Graph synchronization complete: {crimes_synced} crimes, "
+            f"{entities_synced} entities, {explicit_rels} explicit edges, "
+            f"{derived_rels} derived edges."
+        )
+
+        return {
+            "status": "completed",
+            "crimes_synced": crimes_synced,
+            "entities_synced": entities_synced,
+            "explicit_relationships_created": explicit_rels,
+            "derived_relationships_created": derived_rels,
+            "graph_stats": stats
+        }
