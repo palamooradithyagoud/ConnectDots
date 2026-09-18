@@ -207,20 +207,27 @@ export default function AnalyticsPage() {
   const startPolling = useCallback(
     (id: string) => {
       if (pollRef.current) clearInterval(pollRef.current);
+      let failCount = 0;
       pollRef.current = setInterval(async () => {
         try {
           const status = await getMlJobStatus(id);
           setJobStatus(status);
           if (status.status === "COMPLETED" || status.status === "FAILED") {
             clearInterval(pollRef.current!);
+            pollRef.current = null;
             setRunning(false);
             if (status.status === "COMPLETED") {
               await loadAllData();
             }
           }
         } catch (e) {
-          clearInterval(pollRef.current!);
-          setRunning(false);
+          failCount++;
+          // Stop polling after 3 consecutive fetch failures
+          if (failCount >= 3) {
+            clearInterval(pollRef.current!);
+            pollRef.current = null;
+            setRunning(false);
+          }
         }
       }, 2000);
     },
