@@ -143,7 +143,7 @@ export default function InvestigationTimeline() {
         ) : filteredEvents.length > 0 ? (
           filteredEvents.map((evt, idx) => (
             <div
-              key={evt.id || idx}
+              key={`${evt.id || 'timeline-evt'}-${idx}`}
               onClick={() => handleEventClick(evt)}
               className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-2.5 hover:bg-white/[0.06] hover:border-brand/30 transition cursor-pointer group"
             >

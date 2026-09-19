@@ -230,6 +230,7 @@ export interface AgentNormalizedEvidence {
 }
 
 export interface AgentFinding {
+  finding_id?: string;
   title: string;
   details: string;
   supporting_evidence_ids: string[];

@@ -50,13 +50,28 @@ export default function InteractiveGraph({
   onLaunchInvestigation,
 }: InteractiveGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-  // Compute 2D node layout using an orbital / radial force layout around center
+  // Custom dragged positions per node id
+  const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+
+  // Canvas Panning State
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Node Dragging State
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const [nodeDragOffset, setNodeDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState<boolean>(false);
+
+  // Pinch-to-zoom Touch State
+  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+  const [initialPinchZoom, setInitialPinchZoom] = useState<number>(1);
+
+  // Compute 2D node layout using an orbital / radial force layout around center, merged with customized dragged positions
   const layoutNodes: PositionedNode[] = useMemo(() => {
     if (!nodes || nodes.length === 0) return [];
 
@@ -78,11 +93,11 @@ export default function InteractiveGraph({
     ];
 
     // Group other nodes by label/type for organized orbital rings
-    const entityNodes = otherNodes.filter(n => ["Location", "Vehicle", "Weapon", "ModusOperandi", "Person", "Organization"].includes(n.label));
+    const entityNodes = otherNodes.filter(n => ["Location", "Vehicle", "Weapon", "ModusOperandi", "Person", "Organization", "Phone"].includes(n.label));
     const relatedCrimes = otherNodes.filter(n => n.label === "Crime");
     const clusterNodes = otherNodes.filter(n => ["CrimeCluster", "Pattern"].includes(n.label));
 
-    // Ring 1: Direct extracted entities (Radius 160)
+    // Ring 1: Direct extracted entities (Radius 150)
     const r1 = 150;
     entityNodes.forEach((node, idx) => {
       const angle = (idx / Math.max(entityNodes.length, 1)) * 2 * Math.PI - Math.PI / 2;
@@ -93,7 +108,7 @@ export default function InteractiveGraph({
       });
     });
 
-    // Ring 2: Related Crime incidents (Radius 270)
+    // Ring 2: Related Crime incidents (Radius 260)
     const r2 = 260;
     relatedCrimes.forEach((node, idx) => {
       const angle = (idx / Math.max(relatedCrimes.length, 1)) * 2 * Math.PI + Math.PI / 4;
@@ -104,7 +119,7 @@ export default function InteractiveGraph({
       });
     });
 
-    // Ring 3: Clusters and Patterns (Radius 340)
+    // Ring 3: Clusters and Patterns (Radius 330)
     const r3 = 330;
     clusterNodes.forEach((node, idx) => {
       const angle = (idx / Math.max(clusterNodes.length, 1)) * 2 * Math.PI + Math.PI / 3;
@@ -115,8 +130,15 @@ export default function InteractiveGraph({
       });
     });
 
-    return positioned;
-  }, [nodes]);
+    // Apply any interactive dragged positions
+    return positioned.map(node => {
+      const customPos = nodePositions[node.id];
+      if (customPos) {
+        return { ...node, x: customPos.x, y: customPos.y };
+      }
+      return node;
+    });
+  }, [nodes, nodePositions]);
 
   const nodeMap = useMemo(() => {
     const map = new Map<string, PositionedNode>();
@@ -192,22 +214,154 @@ export default function InteractiveGraph({
     return p.canonical_name || p.name || p.pattern || p.description || node.id.split(":").pop() || node.id;
   };
 
-  // Drag and pan handlers
+  // Helper: Convert screen viewport coordinates to transformed SVG viewBox space
+  const getSvgCoords = (clientX: number, clientY: number) => {
+    if (!svgRef.current) return { x: clientX, y: clientY };
+    const rect = svgRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return { x: clientX, y: clientY };
+    const scaleX = 800 / rect.width;
+    const scaleY = 550 / rect.height;
+    const svgX = (clientX - rect.left) * scaleX;
+    const svgY = (clientY - rect.top) * scaleY;
+    return {
+      x: (svgX - pan.x) / zoom,
+      y: (svgY - pan.y) / zoom,
+    };
+  };
+
+  // Node Drag Initiation
+  const startNodeDrag = (node: PositionedNode, clientX: number, clientY: number, e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    const coords = getSvgCoords(clientX, clientY);
+    setDraggingNodeId(node.id);
+    setNodeDragOffset({
+      x: node.x - coords.x,
+      y: node.y - coords.y,
+    });
+    setHasMovedDuringDrag(false);
+  };
+
+  // Pointer/Touch Movement Engine
+  const handlePointerMove = (clientX: number, clientY: number) => {
+    if (draggingNodeId) {
+      setHasMovedDuringDrag(true);
+      const coords = getSvgCoords(clientX, clientY);
+      const newX = coords.x + nodeDragOffset.x;
+      const newY = coords.y + nodeDragOffset.y;
+      setNodePositions(prev => ({
+        ...prev,
+        [draggingNodeId]: { x: newX, y: newY },
+      }));
+    } else if (isPanning) {
+      setPan({
+        x: clientX - panStart.x,
+        y: clientY - panStart.y,
+      });
+    }
+  };
+
+  const handlePointerUp = () => {
+    setIsPanning(false);
+    setDraggingNodeId(null);
+    setInitialPinchDistance(null);
+  };
+
+  // Global window listeners for ultra-smooth drag release and mouse tracking
+  useEffect(() => {
+    if (!draggingNodeId && !isPanning) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      handlePointerMove(e.clientX, e.clientY);
+    };
+
+    const handleGlobalMouseUp = () => {
+      handlePointerUp();
+    };
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleGlobalTouchEnd = () => {
+      handlePointerUp();
+    };
+
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    window.addEventListener("touchmove", handleGlobalTouchMove, { passive: true });
+    window.addEventListener("touchend", handleGlobalTouchEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+      window.removeEventListener("touchmove", handleGlobalTouchMove);
+      window.removeEventListener("touchend", handleGlobalTouchEnd);
+    };
+  }, [draggingNodeId, isPanning, nodeDragOffset, panStart, zoom, pan]);
+
+  // Mouse pan handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).tagName === "svg" || (e.target as HTMLElement).tagName === "rect") {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    const target = e.target as HTMLElement;
+    if (target.tagName === "svg" || target.tagName === "rect") {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-    }
+    handlePointerMove(e.clientX, e.clientY);
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    handlePointerUp();
+  };
+
+  // Touch pan & pinch-zoom handlers
+  const getTouchDistance = (t1: React.Touch, t2: React.Touch) => {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dist = getTouchDistance(e.touches[0], e.touches[1]);
+      setInitialPinchDistance(dist);
+      setInitialPinchZoom(zoom);
+      setIsPanning(false);
+      setDraggingNodeId(null);
+    } else if (e.touches.length === 1) {
+      const t = e.touches[0];
+      const target = e.target as HTMLElement;
+      if (target.tagName === "svg" || target.tagName === "rect") {
+        setIsPanning(true);
+        setPanStart({ x: t.clientX - pan.x, y: t.clientY - pan.y });
+      }
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && initialPinchDistance !== null) {
+      const dist = getTouchDistance(e.touches[0], e.touches[1]);
+      const scale = dist / initialPinchDistance;
+      const newZoom = Math.min(Math.max(initialPinchZoom * scale, 0.4), 2.5);
+      setZoom(newZoom);
+    } else if (e.touches.length === 1) {
+      handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    handlePointerUp();
+  };
+
+  // Wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(prev => Math.min(Math.max(prev + delta, 0.4), 2.5));
   };
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.2, 2.5));
@@ -215,6 +369,7 @@ export default function InteractiveGraph({
   const handleReset = () => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    setNodePositions({});
     onSelectNode(null);
     onSelectEdge(null);
   };
@@ -237,10 +392,15 @@ export default function InteractiveGraph({
     <div
       ref={containerRef}
       className="relative h-[560px] w-full overflow-hidden rounded-xl border border-white/10 bg-midnight/90 backdrop-blur-xl shadow-2xl select-none"
+      style={{ touchAction: "none" }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onWheel={handleWheel}
     >
       {/* Top Floating Controls */}
       <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-lg border border-white/10 bg-black/70 px-3 py-1.5 backdrop-blur-md">
@@ -316,7 +476,9 @@ export default function InteractiveGraph({
 
       {/* Main SVG Visualization */}
       <svg
-        className="h-full w-full cursor-grab active:cursor-grabbing"
+        ref={svgRef}
+        className={`h-full w-full ${isPanning ? "cursor-grabbing" : draggingNodeId ? "cursor-grabbing" : "cursor-grab"}`}
+        style={{ touchAction: "none" }}
         viewBox="0 0 800 550"
       >
         <defs>
@@ -437,11 +599,20 @@ export default function InteractiveGraph({
               <g
                 key={node.id}
                 transform={`translate(${node.x}, ${node.y})`}
-                className="cursor-pointer transition-transform duration-200"
+                className="cursor-grab active:cursor-grabbing select-none transition-opacity duration-200"
+                style={{ touchAction: "none" }}
+                onMouseDown={(e) => startNodeDrag(node, e.clientX, e.clientY, e)}
+                onTouchStart={(e) => {
+                  if (e.touches.length === 1) {
+                    startNodeDrag(node, e.touches[0].clientX, e.touches[0].clientY, e);
+                  }
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelectNode(node);
-                  onSelectEdge(null);
+                  if (!hasMovedDuringDrag) {
+                    onSelectNode(node);
+                    onSelectEdge(null);
+                  }
                 }}
                 onMouseEnter={() => setHoveredNodeId(node.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}

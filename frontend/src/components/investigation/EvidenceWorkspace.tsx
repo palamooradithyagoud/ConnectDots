@@ -199,7 +199,7 @@ export default function EvidenceWorkspace() {
 
             return (
               <div
-                key={ev.evidence_id || idx}
+                key={`${ev.evidence_id || 'evidence-item'}-${idx}`}
                 onClick={() => selectEvidence(ev)}
                 className={`flex flex-col gap-2 rounded-xl border p-3 transition cursor-pointer ${
                   isSelected

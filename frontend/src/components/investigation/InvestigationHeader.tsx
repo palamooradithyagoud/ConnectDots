@@ -16,9 +16,10 @@ import {
 import { useInvestigation } from "@/context/InvestigationContext";
 
 const PRESET_CASES = [
-  { id: "1042", label: "Case 1042", category: "Armed Robbery", location: "Noida Sector 18" },
-  { id: "1088", label: "Case 1088", category: "Commercial Robbery", location: "Lajpat Nagar" },
-  { id: "CR-2026-014", label: "CR-2026-014", category: "Burglary", location: "Indiranagar" },
+  { id: "CR-2026-001", label: "CR-2026-001", category: "Theft", location: "Commercial Street" },
+  { id: "CR-2026-002", label: "CR-2026-002", category: "Burglary", location: "Indiranagar" },
+  { id: "CR-2026-004", label: "CR-2026-004", category: "Robbery", location: "MG Road Metro" },
+  { id: "CR-2026-014", label: "CR-2026-014", category: "Armed Robbery", location: "Rajajinagar" },
 ];
 
 export default function InvestigationHeader() {
@@ -100,7 +101,7 @@ export default function InvestigationHeader() {
           <button
             onClick={generateReport}
             disabled={generatingReport || loadingCase}
-            className="btn-metallic inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-900 shadow-lg shadow-brand/10 disabled:opacity-50 hover:brightness-105 transition"
+            className="inline-flex items-center gap-2 rounded-xl border border-brand/40 bg-brand px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-brand-glow disabled:opacity-50 hover:bg-brand-600 transition active:scale-95"
           >
             <FileText className="h-3.5 w-3.5" />
             {generatingReport ? "Generating Report..." : "Investigation Report"}

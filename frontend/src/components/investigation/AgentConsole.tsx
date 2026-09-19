@@ -37,6 +37,7 @@ export const AgentConsole: React.FC<AgentConsoleProps> = ({ onSelectEntity }) =>
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AgentInvestigationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
   const [traceExpanded, setTraceExpanded] = useState(true);
   const [examples, setExamples] = useState<AgentExampleItem[]>([]);
 
@@ -44,7 +45,7 @@ export const AgentConsole: React.FC<AgentConsoleProps> = ({ onSelectEntity }) =>
   useEffect(() => {
     async function fetchExamples() {
       try {
-        const res = await fetch("/api/v1/agent/examples");
+        const res = await fetch(`${apiUrl}/agent/examples`);
         if (res.ok) {
           const data = await res.json();
           setExamples(data.examples || []);
@@ -54,7 +55,7 @@ export const AgentConsole: React.FC<AgentConsoleProps> = ({ onSelectEntity }) =>
       }
     }
     fetchExamples();
-  }, []);
+  }, [apiUrl]);
 
   let investigationCtx: any = null;
   try {
@@ -78,7 +79,7 @@ export const AgentConsole: React.FC<AgentConsoleProps> = ({ onSelectEntity }) =>
         phone_number: investigationCtx.selectedPhoneId,
       } : undefined;
 
-      const res = await fetch("/api/v1/agent/investigate", {
+      const res = await fetch(`${apiUrl}/agent/investigate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

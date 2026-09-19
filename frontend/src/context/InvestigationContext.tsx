@@ -88,7 +88,7 @@ export function InvestigationProvider({ children }: { children: ReactNode }) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
   // Case State
-  const [selectedCaseId, setSelectedCaseId] = useState<string>("1042");
+  const [selectedCaseId, setSelectedCaseId] = useState<string>("CR-2026-001");
   const [caseContext, setCaseContext] = useState<CaseContextBundle | null>(null);
   const [loadingCase, setLoadingCase] = useState<boolean>(false);
   const [caseError, setCaseError] = useState<string | null>(null);
@@ -135,19 +135,27 @@ export function InvestigationProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${apiUrl}/graph/crimes/${caseId}?depth=2&max_nodes=50`);
       if (res.ok) {
         const data = await res.json();
-        setGraphNodes(data.nodes || []);
-        setGraphEdges(data.edges || []);
-      } else {
-        // Fallback to person network subgraph if crime graph is empty
-        const netRes = await fetch(`${apiUrl}/network/crimes/${caseId}/subgraph?max_hops=2&max_nodes=50`);
-        if (netRes.ok) {
-          const netData = await netRes.json();
-          setGraphNodes(netData.nodes || []);
-          setGraphEdges(netData.edges || []);
+        if (data.nodes && data.nodes.length > 0) {
+          setGraphNodes(data.nodes);
+          setGraphEdges(data.edges || []);
+          return;
         }
+      }
+      
+      // Fallback to person network subgraph if crime graph is empty or request failed
+      const netRes = await fetch(`${apiUrl}/network/crimes/${caseId}/subgraph?max_hops=2&max_nodes=50`);
+      if (netRes.ok) {
+        const netData = await netRes.json();
+        setGraphNodes(netData.nodes || []);
+        setGraphEdges(netData.edges || []);
+      } else {
+        setGraphNodes([]);
+        setGraphEdges([]);
       }
     } catch (err) {
       console.warn("Could not fetch graph neighborhood:", err);
+      setGraphNodes([]);
+      setGraphEdges([]);
     } finally {
       setLoadingGraph(false);
     }
@@ -189,9 +197,27 @@ export function InvestigationProvider({ children }: { children: ReactNode }) {
     setHighlightedEdgeIds(new Set());
 
     try {
-      const res = await fetch(`${apiUrl}/investigation/case/${caseId}/context`);
+      let activeId = caseId;
+      let res = await fetch(`${apiUrl}/investigation/case/${activeId}/context`);
+      if (!res.ok && res.status === 404) {
+        // If not found, gracefully fall back to first active crime in database
+        try {
+          const crimesRes = await fetch(`${apiUrl}/crimes?page=1&page_size=1`);
+          if (crimesRes.ok) {
+            const cData = await crimesRes.json();
+            const first = cData.items?.[0];
+            if (first?.record_id && first.record_id !== activeId) {
+              activeId = first.record_id;
+              setSelectedCaseId(activeId);
+              res = await fetch(`${apiUrl}/investigation/case/${activeId}/context`);
+            }
+          }
+        } catch {
+          // Keep original error
+        }
+      }
+
       if (!res.ok) {
-        // If not found by custom ID, try searching first crime in database
         throw new Error(`Case '${caseId}' context could not be loaded.`);
       }
       const data: CaseContextBundle = await res.json();
@@ -199,8 +225,8 @@ export function InvestigationProvider({ children }: { children: ReactNode }) {
 
       // Concurrently load Graph & Timeline
       await Promise.all([
-        fetchGraphData(data.case_id || caseId),
-        fetchTimeline(data.case_id || caseId, timelineFilter),
+        fetchGraphData(data.record_id || data.case_id || activeId),
+        fetchTimeline(data.record_id || data.case_id || activeId, timelineFilter),
       ]);
     } catch (err: any) {
       setCaseError(err.message || "Failed to load case context.");
@@ -316,9 +342,10 @@ export function InvestigationProvider({ children }: { children: ReactNode }) {
     setHighlightedNodeIds(highlightedNodes);
     setHighlightedEdgeIds(highlightedEdges);
 
-    // Inject agent finding events into current timeline
+    // Inject agent finding events into current timeline with guaranteed unique IDs
+    const timestampNow = Date.now();
     const agentTimelineEvents: TimelineEventItem[] = (result.findings || []).map((f, idx) => ({
-      id: `agent-find-${idx}`,
+      id: f.finding_id ? `agent-${f.finding_id}-${idx}` : `agent-find-${timestampNow}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
       timestamp: new Date().toISOString(),
       event_type: "AGENT_FINDING",
       source: "AI_AGENT",

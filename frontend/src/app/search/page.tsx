@@ -337,7 +337,7 @@ export default function SemanticSearchPage() {
                       <button
                         onClick={() => handleOpenDetail(item.crime_id)}
                         disabled={loadingCrime}
-                        className="btn-metallic inline-flex items-center gap-1.5 rounded-xs px-3 py-2 text-xs font-black uppercase tracking-wider"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 hover:bg-brand/20 text-brand-200 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-all"
                       >
                         Inspect <ArrowRight className="h-3.5 w-3.5" />
                       </button>
@@ -348,14 +348,14 @@ export default function SemanticSearchPage() {
             })}
           </div>
         ) : searched ? (
-          <div className="glass-panel rounded-xs py-16 text-center space-y-2">
+          <div className="glass-panel py-16 text-center space-y-2">
             <p className="text-sm font-bold uppercase text-white">No Semantically Similar Incidents Found</p>
             <p className="text-xs text-white/50">
               Try lowering the similarity threshold slider or searching with broader keywords.
             </p>
           </div>
         ) : (
-          <div className="glass-panel rounded-xs py-16 text-center space-y-2">
+          <div className="glass-panel py-16 text-center space-y-2">
             <p className="text-sm font-bold uppercase text-white/60">Ready for Semantic Search</p>
             <p className="text-xs text-white/40">
               Type a crime description above or click one of the sample prompt buttons to search Qdrant.

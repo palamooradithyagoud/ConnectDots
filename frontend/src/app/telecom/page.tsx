@@ -25,7 +25,8 @@ import {
 import InteractiveGraph from "@/components/investigation/InteractiveGraph";
 import { GraphNode, GraphEdge } from "@/types/investigation";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = rawApiUrl.replace(/\/api\/v1\/?$/, "");
 
 interface PhoneProfile {
   id: string;

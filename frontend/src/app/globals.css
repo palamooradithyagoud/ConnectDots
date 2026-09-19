@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --color-brand: #5227ff;
-  --color-brand-accent: #B19EEF;
-  --background: #07070e;
+  --color-brand: #7c3aed; /* Electric Violet */
+  --color-brand-accent: #c084fc; /* Vibrant Purple */
+  --background: #030307; /* Dark Black */
   --foreground: #f8fafc;
+  --charcoal-card: #0e0e16; /* Dark Charcoal */
 }
 
 body {
@@ -23,68 +24,92 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d0d1a;
+  background: #06060a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #252538;
+  background: #1c1c28;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5227ff;
+  background: #7c3aed;
 }
 
-/* Glassmorphism Panel */
+/* Dark Charcoal Glassmorphism Panel */
 .glass-panel {
-  background: rgba(17, 17, 26, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(14, 14, 22, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(139, 92, 246, 0.16);
+  border-radius: 1rem;
 }
 
 .glass-panel-hover {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-panel-hover:hover {
-  border-color: rgba(82, 39, 255, 0.4);
-  box-shadow: 0 10px 30px -10px rgba(82, 39, 255, 0.25);
+  border-color: rgba(139, 92, 246, 0.45);
+  box-shadow: 0 10px 30px -10px rgba(124, 58, 237, 0.3);
   transform: translateY(-2px);
 }
 
-/* Metallic Silver Button from Innovators Conclave */
+/* Frosted Titanium Glass Button */
 .btn-metallic {
-  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 50%, #94a3b8 100%);
-  color: #020618;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 4px 12px rgba(148, 163, 184, 0.2);
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-metallic:hover {
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 50%, #cbd5e1 100%);
-  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.25);
+  color: #ffffff;
 }
 
 .btn-metallic:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
-/* Solid Brand Button */
+/* Vibrant Violet + Purple Button */
 .btn-brand {
-  background-color: #5227ff;
+  background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #c026d3 100%);
   color: #ffffff;
-  transition: all 0.2s ease;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.45);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-brand:hover {
-  opacity: 0.9;
-  box-shadow: 0 0 20px rgba(82, 39, 255, 0.4);
+  background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #d946ef 100%);
+  border-color: rgba(232, 121, 249, 0.7);
+  box-shadow: 0 6px 28px rgba(139, 92, 246, 0.6);
+  transform: scale(1.02);
 }
 
 .btn-brand:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
+}
+
+/* Techsnap-inspired light pill button */
+.btn-pill-light {
+  background: #ffffff;
+  color: #0d0d14;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-pill-light:hover {
+  background: #f1f5f9;
+  transform: scale(1.02);
 }
 
 /* Leaflet Map popup customization */

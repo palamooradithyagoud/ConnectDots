@@ -17,6 +17,27 @@ class GraphQueryService:
     Executes bounded graph queries for investigation workflows.
     """
 
+    @staticmethod
+    def _clean_properties(raw_props: Any) -> Any:
+        """Sanitizes properties by converting neo4j DateTime, Date, and non-primitive types to strings."""
+        if not isinstance(raw_props, dict):
+            return raw_props
+        cleaned = {}
+        for k, v in raw_props.items():
+            if v is None:
+                cleaned[k] = None
+            elif hasattr(v, "iso_format"):
+                cleaned[k] = v.iso_format()
+            elif hasattr(v, "isoformat"):
+                cleaned[k] = v.isoformat()
+            elif isinstance(v, (dict, list)):
+                cleaned[k] = v
+            elif hasattr(v, "__str__") and not isinstance(v, (str, int, float, bool)):
+                cleaned[k] = str(v)
+            else:
+                cleaned[k] = v
+        return cleaned
+
     @classmethod
     def get_crime_neighborhood(
         cls,
@@ -80,39 +101,71 @@ class GraphQueryService:
         raw_id = clean_crime_id.replace("crime:", "")
         prefixed_id = f"crime:{raw_id}"
 
-        rejection_filter = "" if include_rejected else "AND ALL(x IN r WHERE coalesce(x.status, '') <> 'REJECTED')"
-        query = f"""
-        MATCH path = (start:Crime)-[r*1..{depth}]-(neighbor)
-        WHERE (start.id = $raw_id OR start.id = $prefixed_id) {rejection_filter}
-        WITH start, r, neighbor, nodes(path) as path_nodes, relationships(path) as path_rels
+        rejection_filter = "" if include_rejected else "WHERE ALL(x IN relationships(path) WHERE coalesce(x.status, '') <> 'REJECTED')"
+        match_start_query = """
+        MATCH (start:Crime)
+        WHERE (start.id = $raw_id OR start.id = $prefixed_id OR start.record_id = $raw_id OR start.record_id = $prefixed_id)
+        RETURN start
+        LIMIT 1
+        """
+        paths_query = f"""
+        MATCH (start:Crime)
+        WHERE (start.id = $raw_id OR start.id = $prefixed_id OR start.record_id = $raw_id OR start.record_id = $prefixed_id)
+        MATCH path = (start)-[r*1..{depth}]-(neighbor)
+        {rejection_filter}
+        RETURN path
         LIMIT {max_nodes}
-        UNWIND path_nodes as n
-        UNWIND path_rels as rel
-        RETURN collect(DISTINCT {{
-            id: n.id,
-            label: labels(n)[0],
-            properties: properties(n)
-        }}) as nodes,
-        collect(DISTINCT {{
-            source: startNode(rel).id,
-            target: endNode(rel).id,
-            relation: type(rel),
-            properties: properties(rel)
-        }}) as edges
         """
         try:
             with driver.session(database=settings.NEO4J_DATABASE) as session:
-                res = session.run(query, {"raw_id": raw_id, "prefixed_id": prefixed_id}).single()
-                if res and res["nodes"]:
+                params = {"raw_id": raw_id, "prefixed_id": prefixed_id}
+                start_rec = session.run(match_start_query, params).single()
+                if start_rec and start_rec["start"]:
+                    start_node = start_rec["start"]
+                    center_id = start_node.get("id") or prefixed_id
+                    nodes_map = {
+                        center_id: {
+                            "id": center_id,
+                            "label": list(start_node.labels)[0] if start_node.labels else "Crime",
+                            "properties": cls._clean_properties(dict(start_node))
+                        }
+                    }
+                    edges_list = []
+                    seen_edges = set()
+
+                    paths_result = session.run(paths_query, params)
+                    for record in paths_result:
+                        path = record["path"]
+                        for n in path.nodes:
+                            nid = n.get("id") or str(n.id)
+                            if nid not in nodes_map:
+                                nodes_map[nid] = {
+                                    "id": nid,
+                                    "label": list(n.labels)[0] if n.labels else "Entity",
+                                    "properties": cls._clean_properties(dict(n))
+                                }
+                        for rel in path.relationships:
+                            src_id = rel.start_node.get("id") or str(rel.start_node.id)
+                            tgt_id = rel.end_node.get("id") or str(rel.end_node.id)
+                            edge_key = (src_id, tgt_id, rel.type)
+                            if edge_key not in seen_edges:
+                                seen_edges.add(edge_key)
+                                edges_list.append({
+                                    "source": src_id,
+                                    "target": tgt_id,
+                                    "relation": rel.type,
+                                    "properties": cls._clean_properties(dict(rel))
+                                })
+
                     return {
-                        "center_node_id": crime_node_id,
-                        "nodes": res["nodes"],
-                        "edges": res["edges"],
-                        "total_nodes": len(res["nodes"]),
-                        "total_edges": len(res["edges"])
+                        "center_node_id": center_id,
+                        "nodes": list(nodes_map.values()),
+                        "edges": edges_list,
+                        "total_nodes": len(nodes_map),
+                        "total_edges": len(edges_list)
                     }
         except Exception as e:
-            logger.error(f"Error executing get_crime_neighborhood in Neo4j: {e}")
+            logger.error(f"Error executing get_crime_neighborhood in Neo4j: {e}", exc_info=True)
 
         return {
             "center_node_id": crime_node_id,
@@ -123,7 +176,7 @@ class GraphQueryService:
         }
 
     @classmethod
-    def find_connected_crimes(cls, crime_id: str) -> List[Dict[str, Any]]:
+    def find_connected_crimes(cls, crime_id: str, max_hops: int = 1, limit: int = 25, **kwargs) -> List[Dict[str, Any]]:
         """
         Returns all other Crime nodes connected to this crime (direct or via 1 entity).
         Provides reason, relationship type, confidence, and explicit vs derived distinction.
@@ -168,14 +221,14 @@ class GraphQueryService:
         driver = Neo4jService.get_driver()
         raw_id = clean_id
         prefixed_id = f"crime:{raw_id}"
-        query = """
+        query = f"""
         MATCH (c1:Crime)-[r]-(c2:Crime)
-        WHERE (c1.id = $raw_id OR c1.id = $prefixed_id) AND c1.id <> c2.id
+        WHERE (c1.id = $raw_id OR c1.id = $prefixed_id OR c1.record_id = $raw_id OR c1.record_id = $prefixed_id) AND c1.id <> c2.id
         RETURN DISTINCT c2.id as other_id, c2.record_id as other_record_id,
                c2.category as other_category, type(r) as relation,
                r.confidence as confidence, r.confidence_type as confidence_type,
                r.source as source, r.entity_name as entity_name
-        LIMIT 25
+        LIMIT {limit}
         """
         try:
             with driver.session(database=settings.NEO4J_DATABASE) as session:
@@ -240,7 +293,7 @@ class GraphQueryService:
                     nodes = [{
                         "id": f"pattern:{pat['id']}",
                         "label": "Pattern",
-                        "properties": dict(pat)
+                        "properties": cls._clean_properties(dict(pat))
                     }]
                     edges = []
                     for c in crimes:
@@ -248,7 +301,7 @@ class GraphQueryService:
                         nodes.append({
                             "id": c_id,
                             "label": "Crime",
-                            "properties": dict(c)
+                            "properties": cls._clean_properties(dict(c))
                         })
                         edges.append({
                             "source": c_id,
@@ -291,7 +344,7 @@ class GraphQueryService:
                     paths.append({
                         "length": 1,
                         "path": [node_a, r["relation"], node_b],
-                        "details": r.get("properties", {})
+                        "details": cls._clean_properties(r.get("properties", {}))
                     })
 
             # Check 2-hop
@@ -314,7 +367,8 @@ class GraphQueryService:
         prefixed_b = f"crime:{raw_b}"
         query = f"""
         MATCH (c1:Crime), (c2:Crime)
-        WHERE (c1.id = $raw_a OR c1.id = $prefixed_a) AND (c2.id = $raw_b OR c2.id = $prefixed_b)
+        WHERE (c1.id = $raw_a OR c1.id = $prefixed_a OR c1.record_id = $raw_a OR c1.record_id = $prefixed_a)
+          AND (c2.id = $raw_b OR c2.id = $prefixed_b OR c2.record_id = $raw_b OR c2.record_id = $prefixed_b)
         MATCH p = allShortestPaths((c1)-[*..{max_depth}]-(c2))
         RETURN [n in nodes(p) | {{id: n.id, label: labels(n)[0]}}] as nodes,
                [r in relationships(p) | {{type: type(r), props: properties(r)}}] as rels,
@@ -333,7 +387,10 @@ class GraphQueryService:
                     {
                         "length": r["length"],
                         "nodes": r["nodes"],
-                        "relationships": r["rels"]
+                        "relationships": [
+                            {"type": rel["type"], "props": cls._clean_properties(rel.get("props", {}))}
+                            for rel in r.get("rels", [])
+                        ]
                     }
                     for r in results
                 ]
@@ -395,38 +452,69 @@ class GraphQueryService:
         num_clean = clean_num.replace("phone:", "")
         prefixed_id = f"phone:{num_clean}"
 
-        query = f"""
-        MATCH path = (start:Phone)-[r*1..{depth}]-(neighbor)
+        match_start_query = """
+        MATCH (start:Phone)
         WHERE start.number = $num_clean OR start.id = $prefixed_id OR start.id = $num_clean
-        WITH start, r, neighbor, nodes(path) as path_nodes, relationships(path) as path_rels
+        RETURN start
+        LIMIT 1
+        """
+        paths_query = f"""
+        MATCH (start:Phone)
+        WHERE start.number = $num_clean OR start.id = $prefixed_id OR start.id = $num_clean
+        MATCH path = (start)-[r*1..{depth}]-(neighbor)
+        RETURN path
         LIMIT {max_nodes}
-        UNWIND path_nodes as n
-        UNWIND path_rels as rel
-        RETURN collect(DISTINCT {{
-            id: n.id,
-            label: labels(n)[0],
-            properties: properties(n)
-        }}) as nodes,
-        collect(DISTINCT {{
-            source: startNode(rel).id,
-            target: endNode(rel).id,
-            relation: type(rel),
-            properties: properties(rel)
-        }}) as edges
         """
         try:
             with driver.session(database=settings.NEO4J_DATABASE) as session:
-                res = session.run(query, {"num_clean": num_clean, "prefixed_id": prefixed_id}).single()
-                if res and res["nodes"]:
+                params = {"num_clean": num_clean, "prefixed_id": prefixed_id}
+                start_rec = session.run(match_start_query, params).single()
+                if start_rec and start_rec["start"]:
+                    start_node = start_rec["start"]
+                    center_id = start_node.get("id") or prefixed_id
+                    nodes_map = {
+                        center_id: {
+                            "id": center_id,
+                            "label": list(start_node.labels)[0] if start_node.labels else "Phone",
+                            "properties": cls._clean_properties(dict(start_node))
+                        }
+                    }
+                    edges_list = []
+                    seen_edges = set()
+
+                    paths_result = session.run(paths_query, params)
+                    for record in paths_result:
+                        path = record["path"]
+                        for n in path.nodes:
+                            nid = n.get("id") or str(n.id)
+                            if nid not in nodes_map:
+                                nodes_map[nid] = {
+                                    "id": nid,
+                                    "label": list(n.labels)[0] if n.labels else "Entity",
+                                    "properties": cls._clean_properties(dict(n))
+                                }
+                        for rel in path.relationships:
+                            src_id = rel.start_node.get("id") or str(rel.start_node.id)
+                            tgt_id = rel.end_node.get("id") or str(rel.end_node.id)
+                            edge_key = (src_id, tgt_id, rel.type)
+                            if edge_key not in seen_edges:
+                                seen_edges.add(edge_key)
+                                edges_list.append({
+                                    "source": src_id,
+                                    "target": tgt_id,
+                                    "relation": rel.type,
+                                    "properties": cls._clean_properties(dict(rel))
+                                })
+
                     return {
-                        "center_node_id": phone_node_id,
-                        "nodes": res["nodes"],
-                        "edges": res["edges"],
-                        "total_nodes": len(res["nodes"]),
-                        "total_edges": len(res["edges"])
+                        "center_node_id": center_id,
+                        "nodes": list(nodes_map.values()),
+                        "edges": edges_list,
+                        "total_nodes": len(nodes_map),
+                        "total_edges": len(edges_list)
                     }
         except Exception as e:
-            logger.error(f"Error executing get_phone_neighborhood: {e}")
+            logger.error(f"Error executing get_phone_neighborhood: {e}", exc_info=True)
 
         return {
             "center_node_id": phone_node_id,
@@ -452,7 +540,7 @@ class GraphQueryService:
                         c_id = rel.get("source")
                         c_node = Neo4jService._mock_nodes.get(c_id)
                         if c_node:
-                            linked_crimes.append(c_node.get("properties", {}))
+                            linked_crimes.append(cls._clean_properties(c_node.get("properties", {})))
             return linked_crimes
 
         driver = Neo4jService.get_driver()
@@ -465,7 +553,13 @@ class GraphQueryService:
         try:
             with driver.session(database=settings.NEO4J_DATABASE) as session:
                 results = session.run(query, {"num": clean_num, "prefixed_id": phone_node_id}).data()
-                return [r["crime"] for r in results]
+                return [
+                    {
+                        "crime": cls._clean_properties(r.get("crime", {})),
+                        "relationship": cls._clean_properties(r.get("relationship", {}))
+                    }
+                    for r in results
+                ]
         except Exception as e:
             logger.error(f"Error finding crimes by phone: {e}")
             return []

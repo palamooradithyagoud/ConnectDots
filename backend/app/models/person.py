@@ -71,15 +71,8 @@ class CrimePersonAssociation(Base):
     role = Column(String(50), default="PERSON_OF_INTEREST")  # SUSPECT, ACCUSED, PERSON_OF_INTEREST, WITNESS, VICTIM
     relationship_type = Column(String(50), default="MENTIONED_IN")  # MENTIONED_IN, INVOLVED_IN, ASSOCIATED_WITH
     confidence = Column(Float, default=0.9)
+    extraction_confidence = Column(Float, default=0.9)
     evidence_excerpt = Column(Text, nullable=True)  # Grounded text passage from source narrative
-
-    @property
-    def extraction_confidence(self) -> float:
-        return self.confidence
-
-    @extraction_confidence.setter
-    def extraction_confidence(self, value: float) -> None:
-        self.confidence = value
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 

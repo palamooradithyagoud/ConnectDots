@@ -10,24 +10,33 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: "#5227ff",
-          50: "#f4f1ff",
-          100: "#eae5ff",
-          200: "#d7cdff",
-          300: "#b19eef",
-          400: "#8b66ff",
-          500: "#5227ff",
-          600: "#441bdf",
-          700: "#3814b8",
-          800: "#2f1295",
-          900: "#281177",
+          DEFAULT: "#7c3aed", // Electric Violet
+          50: "#f5f3ff",
+          100: "#ede9fe",
+          200: "#ddd6fe",
+          300: "#c4b5fd",
+          400: "#a78bfa",
+          500: "#8b5cf6",
+          600: "#7c3aed",
+          700: "#6d28d9",
+          800: "#5b21b6",
+          900: "#4c1d95",
+          accent: "#c084fc",
+        },
+        charcoal: {
+          DEFAULT: "#0d0d14",
+          dark: "#050508",
+          card: "#12121c",
+          surface: "#171725",
+          border: "rgba(139, 92, 246, 0.18)",
+          hover: "#1d1d2e",
         },
         midnight: {
-          DEFAULT: "#0d0d1a",
-          surface: "#11111a",
-          card: "#161624",
-          border: "rgba(255, 255, 255, 0.08)",
-          hover: "rgba(255, 255, 255, 0.04)",
+          DEFAULT: "#050509", // Dark Black base
+          surface: "#0d0d14", // Dark Charcoal surface
+          card: "#12121c", // Dark Charcoal card
+          border: "rgba(139, 92, 246, 0.15)",
+          hover: "rgba(124, 58, 237, 0.1)",
         },
         status: {
           valid: "#00bb7f",
@@ -41,8 +50,10 @@ const config: Config = {
         mono: ["var(--font-geist-mono)", "monospace"],
       },
       boxShadow: {
-        "brand-glow": "0 0 25px -5px rgba(82, 39, 255, 0.35)",
-        "card-glass": "0 20px 40px rgba(0, 0, 0, 0.6)",
+        "brand-glow": "0 0 25px -5px rgba(124, 58, 237, 0.5)",
+        "violet-glow": "0 0 35px -5px rgba(139, 92, 246, 0.4)",
+        "purple-glow": "0 0 30px -5px rgba(168, 85, 247, 0.45)",
+        "card-glass": "0 20px 40px rgba(0, 0, 0, 0.7)",
       },
     },
   },

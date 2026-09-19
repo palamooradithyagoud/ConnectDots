@@ -33,11 +33,17 @@ class KeyIndividualService:
         scope_id: Optional[str] = None,
         sort_by: str = "degree_centrality",
         limit: int = 20,
-        offset: int = 0
+        offset: int = 0,
+        scope_crime_id: Optional[str] = None,
+        **kwargs
     ) -> Dict[str, Any]:
         """
         Computes or retrieves ranked key individuals with contextual network breakdown.
         """
+        if scope_crime_id and not scope_id:
+            scope_id = scope_crime_id
+            scope_type = "crime"
+
         # 1. Run Centrality Engine on scoped graph
         analysis_res = CentralityService.compute_network_metrics(
             scope_type=scope_type,

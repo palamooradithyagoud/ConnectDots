@@ -108,15 +108,15 @@ export default function CrimeExplorerPage() {
         <button
           onClick={loadCrimes}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xs border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-white/10 transition-all self-start"
+          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/80 hover:bg-white/[0.08] hover:text-white transition-all self-start active:scale-95"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh Records
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin text-brand-300" : ""}`} />
+          <span>Refresh Records</span>
         </button>
       </div>
 
       {/* Filter Bar */}
-      <div className="glass-panel rounded-xs p-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="glass-panel p-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
@@ -128,7 +128,7 @@ export default function CrimeExplorerPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-xs border border-white/10 bg-black/40 py-2 pl-9 pr-3 text-xs text-white placeholder-white/40 focus:border-brand focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-black/40 py-2 pl-9 pr-3 text-xs text-white placeholder-white/40 focus:border-brand focus:outline-none transition"
           />
         </div>
 
@@ -140,7 +140,7 @@ export default function CrimeExplorerPage() {
               setCategory(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-xs border border-white/10 bg-black/40 py-2 px-3 text-xs text-white uppercase focus:border-brand focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-black/40 py-2 px-3 text-xs text-white uppercase focus:border-brand focus:outline-none transition"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c} className="bg-midnight text-white">
@@ -161,7 +161,7 @@ export default function CrimeExplorerPage() {
               setLocationFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-xs border border-white/10 bg-black/40 py-2 pl-9 pr-3 text-xs text-white placeholder-white/40 focus:border-brand focus:outline-none"
+            className="w-full rounded-lg border border-white/10 bg-black/40 py-2 pl-9 pr-3 text-xs text-white placeholder-white/40 focus:border-brand focus:outline-none transition"
           />
         </div>
 
@@ -176,7 +176,7 @@ export default function CrimeExplorerPage() {
                 setPageSize(Number(e.target.value));
                 setPage(1);
               }}
-              className="rounded-xs border border-white/10 bg-black/40 py-1 px-2 text-xs text-white"
+              className="rounded-lg border border-white/10 bg-black/40 py-1 px-2 text-xs text-white focus:outline-none"
             >
               <option value="10">10</option>
               <option value="20">20</option>
@@ -187,7 +187,7 @@ export default function CrimeExplorerPage() {
       </div>
 
       {/* High-density Data Table */}
-      <div className="glass-panel rounded-xs overflow-hidden border border-white/10">
+      <div className="glass-panel overflow-hidden border border-white/10">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-white/10 bg-black/30 text-[0.68rem] font-bold uppercase tracking-wider text-white/50 select-none">

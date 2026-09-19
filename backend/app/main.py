@@ -61,6 +61,23 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc: Exception):
+    logger.exception(f"Unhandled server error: {exc}")
+    from fastapi.responses import JSONResponse
+    origin = request.headers.get("origin") or "*"
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+
 @app.get("/", tags=["Root"])
 def root():
     return {
