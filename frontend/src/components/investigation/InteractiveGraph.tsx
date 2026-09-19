@@ -15,9 +15,11 @@ import {
   ShieldAlert,
   Building,
   Maximize2,
+  Minimize2,
   PhoneCall,
   TrendingUp
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface InteractiveGraphProps {
   nodes: GraphNode[];
@@ -54,6 +56,33 @@ export default function InteractiveGraph({
   const [zoom, setZoom] = useState<number>(1);
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!isFullscreen) {
+        if (containerRef.current?.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        }
+        setIsFullscreen(true);
+      } else {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+        setIsFullscreen(false);
+      }
+    } catch {
+      setIsFullscreen((prev) => !prev);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   // Custom dragged positions per node id
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
@@ -391,7 +420,12 @@ export default function InteractiveGraph({
   return (
     <div
       ref={containerRef}
-      className="relative h-[560px] w-full overflow-hidden rounded-xl border border-white/10 bg-midnight/90 backdrop-blur-xl shadow-2xl select-none"
+      className={cn(
+        "overflow-hidden select-none transition-all duration-300",
+        isFullscreen
+          ? "fixed inset-0 z-[9999] h-screen w-screen rounded-none border-0 bg-[#050509]"
+          : "relative h-[560px] w-full rounded-xl border border-white/10 bg-midnight/90 backdrop-blur-xl shadow-2xl"
+      )}
       style={{ touchAction: "none" }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -412,7 +446,7 @@ export default function InteractiveGraph({
         </div>
       </div>
 
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/70 p-1 backdrop-blur-md">
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/70 p-1 backdrop-blur-md shadow-lg">
         <button
           onClick={handleZoomIn}
           title="Zoom In"
@@ -433,6 +467,18 @@ export default function InteractiveGraph({
           className="rounded p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
         >
           <RotateCcw className="h-4 w-4" />
+        </button>
+        <div className="h-4 w-px bg-white/20 mx-0.5" />
+        <button
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Exit Fullscreen (Esc)" : "Open in Full Screen"}
+          className="rounded p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition-colors group"
+        >
+          {isFullscreen ? (
+            <Minimize2 className="h-4 w-4 text-purple-400 group-hover:scale-110 transition-transform" />
+          ) : (
+            <Maximize2 className="h-4 w-4 group-hover:scale-110 transition-transform" />
+          )}
         </button>
       </div>
 

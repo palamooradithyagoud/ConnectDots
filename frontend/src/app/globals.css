@@ -2,12 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --color-brand: #7c3aed; /* Electric Violet */
-  --color-brand-accent: #c084fc; /* Vibrant Purple */
-  --background: #030307; /* Dark Black */
-  --foreground: #f8fafc;
-  --charcoal-card: #0e0e16; /* Dark Charcoal */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 271 91% 65%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 271 91% 65%;
+    --radius: 0.5rem;
+
+    --color-brand: #7c3aed; /* Electric Violet */
+    --color-brand-accent: #c084fc; /* Vibrant Purple */
+    --charcoal-card: #0e0e16; /* Dark Charcoal */
+  }
+
+  .dark {
+    --background: 240 40% 1.2%; /* #030307 */
+    --foreground: 210 40% 98%;
+    --card: 240 25% 6%; /* #0e0e16 */
+    --card-foreground: 210 40% 98%;
+    --popover: 240 25% 6%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 271 91% 65%; /* violet-brand */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 240 15% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 240 15% 15%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 240 15% 15%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 240 15% 18%;
+    --input: 240 15% 18%;
+    --ring: 271 91% 65%;
+  }
 }
 
 html {
@@ -151,3 +194,113 @@ body {
 .leaflet-popup-tip {
   background: #11111a !important;
 }
+
+/* From Uiverse.io by mrhyddenn - Custom CONNECTDOTS letter flip */
+.uiverse-brand-btn {
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+  user-select: none;
+}
+
+.uiverse-brand-box {
+  width: 15px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #fff;
+  transition: all .5s;
+  cursor: pointer;
+  position: relative;
+  background: rgb(124, 58, 237);
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+@media (min-width: 640px) {
+  .uiverse-brand-box {
+    width: 17px;
+    height: 22px;
+    font-size: 12px;
+  }
+}
+
+/* Accent for 'DOTS' */
+.uiverse-brand-box.box-accent {
+  background: rgb(217, 70, 239);
+}
+
+.uiverse-brand-box:before {
+  content: "C";
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #0f0f16;
+  color: #c084fc;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(100%);
+  transition: transform .4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 900;
+}
+
+.uiverse-brand-box:nth-child(2)::before {
+  transform: translateY(-100%);
+  content: 'O';
+}
+
+.uiverse-brand-box:nth-child(3)::before {
+  content: 'N';
+}
+
+.uiverse-brand-box:nth-child(4)::before {
+  transform: translateY(-100%);
+  content: 'N';
+}
+
+.uiverse-brand-box:nth-child(5)::before {
+  content: 'E';
+}
+
+.uiverse-brand-box:nth-child(6)::before {
+  transform: translateY(-100%);
+  content: 'C';
+}
+
+.uiverse-brand-box:nth-child(7)::before {
+  content: 'T';
+}
+
+.uiverse-brand-box:nth-child(8)::before {
+  transform: translateY(-100%);
+  content: 'D';
+  color: #f472b6;
+}
+
+.uiverse-brand-box:nth-child(9)::before {
+  content: 'O';
+  color: #f472b6;
+}
+
+.uiverse-brand-box:nth-child(10)::before {
+  transform: translateY(-100%);
+  content: 'T';
+  color: #f472b6;
+}
+
+.uiverse-brand-box:nth-child(11)::before {
+  content: 'S';
+  color: #f472b6;
+}
+
+.uiverse-brand-btn:hover .uiverse-brand-box:before {
+  transform: translateY(0);
+}
+
