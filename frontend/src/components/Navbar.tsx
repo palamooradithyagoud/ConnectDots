@@ -40,10 +40,23 @@ export default function Navbar() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const y = window.scrollY;
+          setScrolled((prev) => {
+            // Hysteresis prevents flickering when hovering around the threshold
+            if (!prev && y > 50) return true;
+            if (prev && y < 25) return false;
+            return prev;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -314,22 +327,20 @@ export default function Navbar() {
   if (isLandingPage) {
     return (
       <nav
-        className={`fixed z-[100] transition-all duration-500 ease-out ${
+        className={`fixed z-[100] left-1/2 -translate-x-1/2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[top,width,background-color,box-shadow,border-radius] ${
           scrolled
-            ? "top-3 sm:top-4 left-1/2 -translate-x-1/2 w-[94%] max-w-[1320px] rounded-full border border-purple-500/30 bg-[#080714]/92 backdrop-blur-2xl shadow-[0_16px_45px_rgba(0,0,0,0.85),0_0_30px_rgba(223,0,149,0.18)] px-4 sm:px-6 py-2"
-            : "top-0 left-0 right-0 w-full bg-transparent pt-3.5 pb-2"
+            ? "top-3 sm:top-4 w-[94%] max-w-[1320px] rounded-full border border-purple-500/30 bg-[#080714]/92 backdrop-blur-2xl shadow-[0_16px_45px_rgba(0,0,0,0.85),0_0_30px_rgba(223,0,149,0.18)] px-4 sm:px-6 py-2"
+            : "top-0 w-full max-w-[1600px] rounded-none border border-transparent bg-transparent shadow-none px-6 pt-3.5 pb-2"
         }`}
       >
-        <div className={`relative mx-auto transition-all duration-500 ease-in-out w-full ${
-          scrolled ? "max-w-full px-1" : "max-w-[1400px] xl:max-w-[1500px] 2xl:max-w-[1600px] px-6"
-        }`}>
+        <div className="relative mx-auto w-full">
           {/* Desktop Navbar Row */}
           <div className="relative hidden lg:flex w-full items-center justify-between">
             {/* Left: Logo */}
             <div className="flex items-center justify-start w-[15%] min-w-[180px] shrink-0">
               <Link href="/" className="flex items-center gap-2.5 group">
                 <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-tr from-[#df0095] via-purple-600 to-violet-600 p-0.5 shadow-md group-hover:scale-105 transition-transform duration-300">
-                  <div className={`flex h-full w-full items-center justify-center rounded-[10px] ${
+                  <div className={`flex h-full w-full items-center justify-center rounded-[10px] transition-colors duration-500 ${
                     scrolled ? "bg-[#0d0d18]" : "bg-white"
                   }`}>
                     <Image
@@ -343,12 +354,12 @@ export default function Navbar() {
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <span className={`text-xl font-black tracking-tight font-sans leading-none transition-colors ${
+                  <span className={`text-xl font-black tracking-tight font-sans leading-none transition-colors duration-500 ${
                     scrolled ? "text-white" : "text-slate-950"
                   }`}>
                     Connect<span className="text-[#df0095]">Dots</span>
                   </span>
-                  <span className={`text-[0.6rem] font-bold tracking-wider uppercase mt-0.5 transition-colors ${
+                  <span className={`text-[0.6rem] font-bold tracking-wider uppercase mt-0.5 transition-colors duration-500 ${
                     scrolled ? "text-violet-300/70 font-mono" : "text-slate-500"
                   }`}>
                     Snap the crime
@@ -359,10 +370,10 @@ export default function Navbar() {
 
             {/* Center: Pill Menu */}
             <div className="w-[70%] flex justify-center items-center shrink-0">
-              <div className={`w-full max-w-[780px] flex py-1.5 px-3 rounded-full justify-evenly items-center space-x-1.5 transition-all duration-300 ${
+              <div className={`w-full max-w-[780px] flex py-1.5 px-3 rounded-full justify-evenly items-center space-x-1.5 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                 scrolled
                   ? "bg-white/[0.06] border border-white/10"
-                  : "bg-white text-black shadow-[0_2px_14px_rgba(0,0,0,0.18)] border border-slate-200/80"
+                  : "bg-white text-slate-900 shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/90"
               }`}>
               {navDropdowns.map((dropdown) => {
                 const isOpen = openDropdown === dropdown.id;
@@ -388,7 +399,7 @@ export default function Navbar() {
                           ? "bg-[#df0095] text-white shadow-[0_0_12px_rgba(223,0,149,0.5)]"
                           : scrolled
                             ? "text-white/80 hover:text-white hover:bg-white/10"
-                            : "bg-white text-slate-900 group-hover:bg-[#df0095] group-hover:text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+                            : "text-slate-800 hover:bg-slate-100 hover:text-slate-950"
                       }`}
                     >
                       <span>{dropdown.label}</span>
