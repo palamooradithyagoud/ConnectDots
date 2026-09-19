@@ -29,6 +29,7 @@ import {
   Lock,
   TrendingUp,
   Layers,
+  Check,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -198,40 +199,113 @@ export default function Navbar() {
       ],
     },
     {
-      id: "business-model",
-      label: "Business Model",
-      href: "#business-model",
+      id: "pricing",
+      label: "Pricing",
+      href: "#pricing",
       items: [
         {
-          title: "District Police Commissionerate",
-          desc: "Local jurisdiction spatial & vector search license",
-          href: "#business-model",
-          icon: Building2,
-          badge: "Tier 1",
+          title: "Free Tier (₹0)",
+          desc: "Limited data sources, 10 cases/mo, 30 days history",
+          href: "#pricing",
+          icon: Zap,
+          badge: "Free",
         },
         {
-          title: "State Police CID & Special Cell",
-          desc: "Full multi-hop graph, telecom CDR & autonomous agent",
-          href: "#business-model",
+          title: "Monthly Pro (₹499/mo)",
+          desc: "Unlimited cases, all data sources, advanced AI & maps",
+          href: "#pricing",
+          icon: Sparkles,
+          badge: "Popular",
+        },
+        {
+          title: "Yearly Pro (₹4,999/yr)",
+          desc: "Full suite, 5+ yrs data, 2 months free, priority support",
+          href: "#pricing",
           icon: Shield,
-          badge: "Flagship",
-        },
-        {
-          title: "Sovereign Air-Gapped Gov",
-          desc: "100% on-premise defense deployment with offline LLMs",
-          href: "#business-model",
-          icon: Lock,
-          badge: "Defense",
-        },
-        {
-          title: "Pay-Per-Case Forensics",
-          desc: "On-demand telecom CDR analysis & crisis escalation",
-          href: "#business-model",
-          icon: Activity,
-          badge: "Add-on",
+          badge: "Save 17%",
         },
       ],
     },
+  ];
+
+  // Pricing tiers for navigation dropdown preview (shadcn pricing tiers component)
+  const pricingTiers = [
+    {
+      name: "Free",
+      icon: "🆓",
+      price: "₹0",
+      period: "",
+      badge: null,
+      description: "Perfect for testing & basic exploration",
+      features: [
+        "10 cases/month FIR / Case Analysis",
+        "Limited Data Sources",
+        "Basic Crime Pattern Detection",
+        "Basic Hotspot Detection",
+        "30 days Historical Data",
+        "Community Support",
+      ],
+      cta: "Get Started Free →",
+      href: "/overview",
+      highlighted: false,
+    },
+    {
+      name: "Monthly Pro",
+      icon: "🚀",
+      price: "₹499",
+      period: "/ month",
+      badge: "Popular",
+      description: "For active investigative units & local stations",
+      features: [
+        "Unlimited FIR / Case Analysis",
+        "All Supported Data Sources",
+        "Advanced AI Pattern Detection",
+        "Hotspot Detection & AI Insights",
+        "Interactive Crime Map (Advanced)",
+        "Trend Analysis & Report Export",
+        "2 years Historical Data",
+        "Priority Processing & Support",
+      ],
+      cta: "Start Monthly Pro →",
+      href: "/overview",
+      highlighted: true,
+    },
+    {
+      name: "Yearly Pro",
+      icon: "👑",
+      price: "₹4,999",
+      period: "/ year",
+      badge: "Best Value",
+      description: "Maximum value for law enforcement units",
+      features: [
+        "Everything in Monthly Pro",
+        "5+ years Historical Data",
+        "2 Months Free (Save ₹1,000)",
+        "Advanced Multi-Modal AI Correlation",
+        "Autonomous AI Detective Reasoning",
+        "Priority Queue Processing",
+        "Dedicated Intelligence Priority Support",
+      ],
+      cta: "Get Yearly Pro →",
+      href: "/overview",
+      highlighted: false,
+    },
+  ];
+
+  // Detailed comparison matrix from user prompt
+  const comparisonRows = [
+    { feature: "Price", free: "₹0", monthly: "₹499 / month", yearly: "₹4,999 / year" },
+    { feature: "Data Sources", free: "Limited", monthly: "All supported sources", yearly: "All supported sources" },
+    { feature: "FIR / Case Analysis", free: "10 cases/month", monthly: "Unlimited", yearly: "Unlimited" },
+    { feature: "Crime Pattern Detection", free: "Basic", monthly: "Advanced AI", yearly: "Advanced AI" },
+    { feature: "Hotspot Detection", free: "Basic", monthly: "✓", yearly: "✓" },
+    { feature: "AI Insights", free: "Limited", monthly: "✓", yearly: "✓" },
+    { feature: "Interactive Crime Map", free: "Basic", monthly: "✓ Advanced", yearly: "✓ Advanced" },
+    { feature: "Trend Analysis", free: "—", monthly: "✓", yearly: "✓" },
+    { feature: "Reports & Export", free: "Limited", monthly: "✓", yearly: "✓" },
+    { feature: "Historical Data", free: "30 days", monthly: "2 years", yearly: "5+ years" },
+    { feature: "Priority Processing", free: "—", monthly: "✓", yearly: "✓" },
+    { feature: "Support", free: "Community", monthly: "Priority", yearly: "Priority" },
   ];
 
   // ==========================================
@@ -325,15 +399,162 @@ export default function Navbar() {
                       />
                     </a>
 
-                    {/* Rich Floating Dropdown Card (Solid White Background with Zero Transparency) */}
-                    <div
-                      className={`absolute left-1/2 -translate-x-1/2 top-full pt-2.5 w-72 z-50 transition-all duration-200 ${
-                        isOpen
-                          ? "block opacity-100 visible"
-                          : "hidden group-hover:block group-hover:opacity-100 group-hover:visible"
-                      }`}
-                    >
-                      <div className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] space-y-1">
+                    {/* Rich Floating Dropdown Card */}
+                    {dropdown.id === "pricing" ? (
+                      /* SHADCN NAVIGATION MENU PRICING TIERS PREVIEW DROPDOWN */
+                      <div
+                        className={`absolute right-[-40px] md:right-[-60px] lg:right-[-90px] top-full pt-2.5 w-[850px] max-w-[92vw] z-50 transition-all duration-200 ${
+                          isOpen
+                            ? "block opacity-100 visible"
+                            : "hidden group-hover:block group-hover:opacity-100 group-hover:visible"
+                        }`}
+                      >
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-[0_25px_70px_rgba(0,0,0,0.5)] text-slate-900 space-y-5 max-h-[82vh] overflow-y-auto text-left">
+                          {/* Header */}
+                          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div>
+                              <h3 className="text-sm sm:text-base font-black text-slate-950 font-mono tracking-tight flex items-center gap-2">
+                                <span>ConnectDots Intelligence Plans</span>
+                                <span className="text-[0.62rem] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-[#df0095] border border-pink-200 uppercase font-sans">
+                                  Public Safety Pricing
+                                </span>
+                              </h3>
+                              <p className="text-xs text-slate-500 font-sans mt-0.5">
+                                Transparent pricing from community testing to full intelligence units.
+                              </p>
+                            </div>
+                            <Link
+                              href="#pricing"
+                              onClick={() => setOpenDropdown(null)}
+                              className="text-xs font-bold text-[#df0095] hover:underline flex items-center gap-1 font-mono shrink-0"
+                            >
+                              <span>Full Page</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </Link>
+                          </div>
+
+                          {/* 3 Tier Cards Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                            {pricingTiers.map((tier, tIdx) => (
+                              <div
+                                key={tIdx}
+                                className={`relative rounded-2xl p-4 flex flex-col justify-between transition-all duration-200 ${
+                                  tier.highlighted
+                                    ? "border-2 border-[#df0095] bg-gradient-to-b from-pink-50/60 to-white shadow-[0_8px_25px_rgba(223,0,149,0.15)] scale-[1.02]"
+                                    : "border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-slate-300"
+                                }`}
+                              >
+                                {tier.badge && (
+                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#e002a2] to-[#df0095] text-white text-[0.62rem] font-black uppercase tracking-wider shadow whitespace-nowrap">
+                                    {tier.badge}
+                                  </div>
+                                )}
+
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-lg">{tier.icon}</span>
+                                    <h4 className="font-mono font-black text-sm text-slate-900">{tier.name}</h4>
+                                  </div>
+
+                                  <div className="mt-2 flex items-baseline gap-1">
+                                    <span className="font-mono font-black text-2xl text-slate-950">{tier.price}</span>
+                                    {tier.period && (
+                                      <span className="text-xs text-slate-500 font-medium font-sans">{tier.period}</span>
+                                    )}
+                                  </div>
+
+                                  <p className="text-[0.68rem] text-slate-500 mt-1 leading-snug font-sans">
+                                    {tier.description}
+                                  </p>
+
+                                  <div className="mt-3.5 pt-3 border-t border-slate-200/70 space-y-1.5 text-left">
+                                    {tier.features.map((feat, fIdx) => (
+                                      <div key={fIdx} className="flex items-start gap-1.5 text-[0.7rem] text-slate-700 font-sans leading-tight">
+                                        <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                        <span>{feat}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 pt-3">
+                                  <Link
+                                    href={tier.href}
+                                    onClick={() => setOpenDropdown(null)}
+                                    className={`w-full inline-flex items-center justify-center py-2 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                                      tier.highlighted
+                                        ? "bg-gradient-to-r from-[#e002a2] via-[#df0095] to-[#c20084] text-white shadow hover:brightness-110 active:scale-95"
+                                        : "bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 active:scale-95"
+                                    }`}
+                                  >
+                                    {tier.cta}
+                                  </Link>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Downside: Feature Comparison Table */}
+                          <div className="pt-3 border-t border-slate-200">
+                            <div className="flex items-center justify-between mb-2 px-1">
+                              <h5 className="text-xs font-mono font-black text-slate-900 uppercase tracking-wider">
+                                Detailed Comparison Table
+                              </h5>
+                              <span className="text-[0.65rem] text-slate-500 font-mono">
+                                All prices in INR (₹)
+                              </span>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 overflow-hidden text-[0.72rem]">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-100 text-slate-700 font-mono text-[0.7rem] border-b border-slate-200">
+                                    <th className="py-2 px-3 font-bold w-[34%]">Feature</th>
+                                    <th className="py-2 px-3 font-bold text-center w-[20%]">🆓 Free</th>
+                                    <th className="py-2 px-3 font-bold text-center w-[23%] text-[#df0095] bg-pink-50/50">
+                                      🚀 Monthly Pro
+                                    </th>
+                                    <th className="py-2 px-3 font-bold text-center w-[23%] text-purple-700">
+                                      👑 Yearly Pro
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                  {comparisonRows.map((row, rIdx) => (
+                                    <tr
+                                      key={rIdx}
+                                      className={rIdx % 2 === 1 ? "bg-slate-50/60" : "bg-white"}
+                                    >
+                                      <td className="py-1.5 px-3 font-semibold text-slate-900">
+                                        {row.feature}
+                                      </td>
+                                      <td className="py-1.5 px-3 text-center text-slate-600 font-mono">
+                                        {row.free}
+                                      </td>
+                                      <td className="py-1.5 px-3 text-center font-bold font-mono text-[#df0095] bg-pink-50/30">
+                                        {row.monthly}
+                                      </td>
+                                      <td className="py-1.5 px-3 text-center font-bold font-mono text-purple-900">
+                                        {row.yearly}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Standard Dropdown Card */
+                      <div
+                        className={`absolute left-1/2 -translate-x-1/2 top-full pt-2.5 w-72 z-50 transition-all duration-200 ${
+                          isOpen
+                            ? "block opacity-100 visible"
+                            : "hidden group-hover:block group-hover:opacity-100 group-hover:visible"
+                        }`}
+                      >
+                        <div className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] space-y-1">
                           {dropdown.items.map((subItem, idx) => {
                             const SubIcon = subItem.icon;
                             return (
@@ -376,6 +597,7 @@ export default function Navbar() {
                           })}
                         </div>
                       </div>
+                    )}
                   </div>
                 );
               })}

@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import ParticleText from "@/components/ParticleText";
+import StructuredPathSolution from "@/components/StructuredPathSolution";
 import {
   Brain,
   Sparkles,
@@ -31,6 +32,7 @@ import {
   FileCheck,
   Workflow,
   Crosshair,
+  Check,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -248,228 +250,111 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          {/* Compact 4-Column Problem Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
             {/* Problem 1 */}
-            <div className="group rounded-3xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-7 sm:p-8 space-y-4 hover:border-rose-500/40 transition-all shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  <Layers className="h-6 w-6" />
+            <div className="group rounded-2xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-4 sm:p-5 space-y-3 hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <Layers className="h-4 w-4" />
+                  </div>
+                  <span className="font-mono text-[0.58rem] font-bold text-rose-400/90 px-2 py-0.5 rounded-full bg-rose-950/40 border border-rose-500/20 uppercase">
+                    Siloed Data
+                  </span>
                 </div>
-                <span className="font-mono text-xs font-bold text-rose-400/80 px-2.5 py-1 rounded-full bg-rose-950/40 border border-rose-500/20">
-                  CRISIS: SILOED DATA
-                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white font-mono leading-snug">
+                  Siloed FIR Records Across Jurisdictions
+                </h3>
+                <p className="text-xs text-white/70 leading-relaxed font-sans">
+                  FIR descriptions filed across state and district borders sit in isolated databases, creating cross-station blindspots.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Siloed FIR Records Across Jurisdictions
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                FIR descriptions filed across state borders and district commissionerates sit isolated in disconnected databases. Criminals exploit these artificial borders knowing neighboring stations lack real-time visibility.
-              </p>
-              <div className="pt-3 border-t border-rose-500/10 flex items-center justify-between text-xs font-mono">
-                <span className="text-white/50">Evidentiary Impact:</span>
-                <span className="text-rose-400 font-bold">78% Cross-Jurisdiction Offender Recidivism</span>
+              <div className="pt-2.5 border-t border-rose-500/10 text-[0.65rem] font-mono space-y-0.5">
+                <span className="text-white/40 block">Evidentiary Impact:</span>
+                <span className="text-rose-400 font-bold block">78% Recidivism Gap</span>
               </div>
             </div>
 
             {/* Problem 2 */}
-            <div className="group rounded-3xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-7 sm:p-8 space-y-4 hover:border-rose-500/40 transition-all shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  <PhoneCall className="h-6 w-6" />
+            <div className="group rounded-2xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-4 sm:p-5 space-y-3 hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <PhoneCall className="h-4 w-4" />
+                  </div>
+                  <span className="font-mono text-[0.58rem] font-bold text-rose-400/90 px-2 py-0.5 rounded-full bg-rose-950/40 border border-rose-500/20 uppercase">
+                    Manual CDR
+                  </span>
                 </div>
-                <span className="font-mono text-xs font-bold text-rose-400/80 px-2.5 py-1 rounded-full bg-rose-950/40 border border-rose-500/20">
-                  BOTTLENECK: MANUAL CDR
-                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white font-mono leading-snug">
+                  Manual CDR Excel Spreadsheet Analysis
+                </h3>
+                <p className="text-xs text-white/70 leading-relaxed font-sans">
+                  Telecom Call Detail Records arrive in millions of rows, requiring manual lookups that miss subtle co-location overlaps.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Manual CDR Excel Spreadsheet Analysis
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                Telecom Call Detail Records arrive as millions of raw Excel rows. Officers spend hundreds of grueling hours running manual Ctrl+F lookups, failing to uncover subtle co-location patterns and temporal overlaps.
-              </p>
-              <div className="pt-3 border-t border-rose-500/10 flex items-center justify-between text-xs font-mono">
-                <span className="text-white/50">Evidentiary Impact:</span>
-                <span className="text-rose-400 font-bold">72+ Hours Golden-Hour Response Lag</span>
+              <div className="pt-2.5 border-t border-rose-500/10 text-[0.65rem] font-mono space-y-0.5">
+                <span className="text-white/40 block">Evidentiary Impact:</span>
+                <span className="text-rose-400 font-bold block">72+ Hour Golden Lag</span>
               </div>
             </div>
 
             {/* Problem 3 */}
-            <div className="group rounded-3xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-7 sm:p-8 space-y-4 hover:border-rose-500/40 transition-all shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  <Radio className="h-6 w-6" />
+            <div className="group rounded-2xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-4 sm:p-5 space-y-3 hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <Radio className="h-4 w-4" />
+                  </div>
+                  <span className="font-mono text-[0.58rem] font-bold text-rose-400/90 px-2 py-0.5 rounded-full bg-rose-950/40 border border-rose-500/20 uppercase">
+                    Burner Evasion
+                  </span>
                 </div>
-                <span className="font-mono text-xs font-bold text-rose-400/80 px-2.5 py-1 rounded-full bg-rose-950/40 border border-rose-500/20">
-                  EVASION: BURNER HARDWARE
-                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white font-mono leading-snug">
+                  Burner SIM & IMEI Hardware Hopping
+                </h3>
+                <p className="text-xs text-white/70 leading-relaxed font-sans">
+                  Cartels rotate prepaid SIMs every 24–48h and swap handsets across cell towers to defeat static phone watchlists.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Burner SIM & IMEI Hardware Hopping
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                Organized cartels swap prepaid SIM cards every 24–48 hours and circulate burner handsets across cellular towers to bypass static phone number blacklists and surveillance lookups.
-              </p>
-              <div className="pt-3 border-t border-rose-500/10 flex items-center justify-between text-xs font-mono">
-                <span className="text-white/50">Evidentiary Impact:</span>
-                <span className="text-rose-400 font-bold">Static Phone Watchlists Rendered Obsolete</span>
+              <div className="pt-2.5 border-t border-rose-500/10 text-[0.65rem] font-mono space-y-0.5">
+                <span className="text-white/40 block">Evidentiary Impact:</span>
+                <span className="text-rose-400 font-bold block">Watchlists Obsolete</span>
               </div>
             </div>
 
             {/* Problem 4 */}
-            <div className="group rounded-3xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-7 sm:p-8 space-y-4 hover:border-rose-500/40 transition-all shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                  <FileText className="h-6 w-6" />
+            <div className="group rounded-2xl border border-rose-500/20 bg-gradient-to-b from-[#140b10] to-[#0d090d] p-4 sm:p-5 space-y-3 hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 shadow-md flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <span className="font-mono text-[0.58rem] font-bold text-rose-400/90 px-2 py-0.5 rounded-full bg-rose-950/40 border border-rose-500/20 uppercase">
+                    Dossier Delay
+                  </span>
                 </div>
-                <span className="font-mono text-xs font-bold text-rose-400/80 px-2.5 py-1 rounded-full bg-rose-950/40 border border-rose-500/20">
-                  DELAY: TIME-TO-CHARGE
-                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white font-mono leading-snug">
+                  Delayed Court Dossiers & Evidence Loss
+                </h3>
+                <p className="text-xs text-white/70 leading-relaxed font-sans">
+                  Building court-admissible dossiers connecting GPS, call records, and suspects takes weeks of manual assembly.
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Delayed Court Dossiers & Evidence Loss
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                Building court-admissible dossiers connecting call records, crime scene GPS coordinates, weapons, and co-conspirators takes weeks, giving syndicates ample time to disperse or intimidate witnesses.
-              </p>
-              <div className="pt-3 border-t border-rose-500/10 flex items-center justify-between text-xs font-mono">
-                <span className="text-white/50">Evidentiary Impact:</span>
-                <span className="text-rose-400 font-bold">65% Case Dismissal Due to Fragmented Records</span>
+              <div className="pt-2.5 border-t border-rose-500/10 text-[0.65rem] font-mono space-y-0.5">
+                <span className="text-white/40 block">Evidentiary Impact:</span>
+                <span className="text-rose-400 font-bold block">65% Case Dismissals</span>
               </div>
             </div>
           </div>
         </section>
 
         {/* ========================================================================= */}
-        {/* 2. SOLUTION SECTION */}
+        {/* 2. SOLUTION SECTION: STRUCTURED PATH WITH ANIMATED THREADS */}
         {/* ========================================================================= */}
-        <section id="solution" className="scroll-mt-28 space-y-8">
-          <div className="text-center max-w-3xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#df0095]/40 bg-[#df0095]/10 px-3.5 py-1 text-xs font-mono font-bold uppercase tracking-wider text-[#ff70db]">
-              <Sparkles className="h-3.5 w-3.5 text-[#df0095]" />
-              <span>02 · The ConnectDots Breakthrough</span>
-            </div>
-            <h2 className="text-3xl sm:text-5xl font-black uppercase text-white font-mono tracking-tight">
-              Unified Multi-Hop Intelligence Engine
-            </h2>
-            <p className="text-sm sm:text-base text-white/70 font-sans leading-relaxed">
-              ConnectDots unifies spatial geofencing, dense semantic vector matching, multi-hop knowledge graph topologies, and an autonomous AI detective into a singular real-time investigation pipeline.
-            </p>
-          </div>
+        <StructuredPathSolution />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-            {/* Solution 1 */}
-            <div className="group rounded-3xl border border-violet-500/30 bg-gradient-to-b from-[#121020] via-[#0d0d16] to-[#07070d] p-7 sm:p-8 space-y-4 hover:border-violet-400 hover:shadow-brand-glow transition-all">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <MapPin className="h-6 w-6" />
-                </div>
-                <span className="font-mono text-xs font-bold text-emerald-400 px-2.5 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/20">
-                  POSTGIS EPSG:4326
-                </span>
-              </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Spatial PostGIS Normalization & Geofencing
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                Converts unstructured incident addresses into WGS84 coordinates. Automatically generates radius buffers via <code>ST_DWithin</code> and multi-point bounding envelopes to isolate crime hotspots across administrative boundaries.
-              </p>
-              <ul className="space-y-1.5 text-xs text-white/80 font-mono pt-2">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>100% Non-destructive forensic audit trail</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Geodetic spatial indexing with instant polygon queries</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Solution 2 */}
-            <div className="group rounded-3xl border border-violet-500/30 bg-gradient-to-b from-[#121020] via-[#0d0d16] to-[#07070d] p-7 sm:p-8 space-y-4 hover:border-violet-400 hover:shadow-brand-glow transition-all">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  <Cpu className="h-6 w-6" />
-                </div>
-                <span className="font-mono text-xs font-bold text-cyan-400 px-2.5 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/20">
-                  QDRANT 384-DIM
-                </span>
-              </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Semantic Vector Search for Modus Operandi
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                Deploys <code>all-MiniLM-L6-v2</code> embeddings to vectorize unstructured FIR text. Uncovers identical modus operandi across police stations regardless of vocabulary, spelling variances, or regional terminology.
-              </p>
-              <ul className="space-y-1.5 text-xs text-white/80 font-mono pt-2">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>Sub-50ms cosine similarity search across 1M+ FIRs</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>spaCy custom entity recognition for weapons and vehicles</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Solution 3 */}
-            <div className="group rounded-3xl border border-violet-500/30 bg-gradient-to-b from-[#121020] via-[#0d0d16] to-[#07070d] p-7 sm:p-8 space-y-4 hover:border-violet-400 hover:shadow-brand-glow transition-all">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                  <Network className="h-6 w-6" />
-                </div>
-                <span className="font-mono text-xs font-bold text-purple-400 px-2.5 py-1 rounded-full bg-purple-950/40 border border-purple-500/20">
-                  NEO4J MULTI-HOP
-                </span>
-              </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Neo4j Knowledge Graph & Syndicate Linkage
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                Maps crimes, suspects, phone numbers, cell towers, and vehicles into a unified Neo4j Aura graph. Executes 1-to-3 hop Cypher queries to reveal hidden cartel kingpins and burner phone rings.
-              </p>
-              <ul className="space-y-1.5 text-xs text-white/80 font-mono pt-2">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-purple-400" />
-                  <span>Multi-hop Cypher queries executed in &lt; 15ms</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-purple-400" />
-                  <span>Centrality and degree scoring for syndicate ringleaders</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Solution 4 */}
-            <div className="group rounded-3xl border border-[#df0095]/40 bg-gradient-to-b from-[#1b0d18] via-[#0d0d16] to-[#07070d] p-7 sm:p-8 space-y-4 hover:border-[#df0095] hover:shadow-[0_0_30px_rgba(223,0,149,0.3)] transition-all">
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-2xl bg-[#df0095]/10 text-[#df0095] border border-[#df0095]/20">
-                  <Brain className="h-6 w-6" />
-                </div>
-                <span className="font-mono text-xs font-bold text-[#df0095] px-2.5 py-1 rounded-full bg-[#df0095]/20 border border-[#df0095]/30">
-                  LLAMA-3.3 70B AGENT
-                </span>
-              </div>
-              <h3 className="text-xl font-bold text-white font-mono">
-                Autonomous AI Detective & Dossier Synthesis
-              </h3>
-              <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-sans">
-                An autonomous Groq Llama-3.3 70B agent equipped with tool-calling capabilities. Recursively interrogates GIS, vectors, knowledge graphs, and CDR telemetry to construct legally sound, court-ready prosecution dossiers.
-              </p>
-              <ul className="space-y-1.5 text-xs text-white/80 font-mono pt-2">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[#df0095]" />
-                  <span>Automated cell tower triangulation & co-location matrix</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-[#df0095]" />
-                  <span>One-click court dossier compilation with source references</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
 
         {/* ========================================================================= */}
         {/* 3. ARCHITECTURE SECTION */}
@@ -695,19 +580,298 @@ export default function LandingPage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* 5. BUSINESS MODEL SECTION */}
+        {/* 5. PRICING & ENTERPRISE DEPLOYMENT SECTION */}
         {/* ========================================================================= */}
-        <section id="business-model" className="scroll-mt-28 space-y-8">
+        <section id="pricing" className="scroll-mt-28 space-y-12">
+          <span id="business-model" className="sr-only" />
+
+          {/* Section Header */}
           <div className="text-center max-w-3xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-500/30 bg-fuchsia-950/20 px-3.5 py-1 text-xs font-mono font-bold uppercase tracking-wider text-fuchsia-300">
-              <Building2 className="h-3.5 w-3.5 text-fuchsia-400" />
-              <span>05 · Public Safety Procurement & Deployment</span>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#df0095]/30 bg-pink-950/20 px-3.5 py-1 text-xs font-mono font-bold uppercase tracking-wider text-pink-300">
+              <Sparkles className="h-3.5 w-3.5 text-[#df0095]" />
+              <span>05 · Transparent Public Safety Pricing</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-black uppercase text-white font-mono tracking-tight">
-              Enterprise Deployment Tiers
+              Predictable Plans, Powerful AI
             </h2>
             <p className="text-sm sm:text-base text-white/70 font-sans leading-relaxed">
-              Engineered specifically for government public safety departments, state police headquarters, and sovereign defense organizations.
+              Start free with basic case testing, or equip your entire investigative unit with real-time multi-modal crime correlation.
+            </p>
+          </div>
+
+          {/* 3 Pricing Tier Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+            {/* Free Plan */}
+            <div className="rounded-3xl border border-white/10 bg-[#0d0d16] p-7 sm:p-8 space-y-6 flex flex-col justify-between hover:border-slate-400/40 transition-all">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-bold text-slate-300 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                    FREE TIER
+                  </span>
+                  <span className="text-2xl">🆓</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white font-mono">Free Explorer</h3>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-mono font-black text-4xl text-white">₹0</span>
+                  </div>
+                  <p className="text-xs text-white/60 font-sans mt-2 leading-relaxed">
+                    Perfect for testing, research & initial field exploration.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-white/10 space-y-2.5 text-xs text-white/80 font-sans">
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span><strong>10 cases/month</strong> FIR / Case Analysis</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Limited Data Sources Access</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Basic Crime Pattern Detection</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Basic Hotspot Detection</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Interactive Crime Map (Basic)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>30 days Historical Data</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>Community Support</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/10">
+                <Link
+                  href="/overview"
+                  className="w-full inline-flex items-center justify-center py-3 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all"
+                >
+                  Get Started Free →
+                </Link>
+              </div>
+            </div>
+
+            {/* Monthly Pro Plan (Highlighted) */}
+            <div className="rounded-3xl border-2 border-[#df0095] bg-gradient-to-b from-[#1f0d1d] via-[#100b14] to-[#0a070e] p-7 sm:p-8 space-y-6 flex flex-col justify-between shadow-[0_0_40px_rgba(223,0,149,0.35)] relative lg:scale-[1.03]">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#e002a2] to-[#df0095] text-white text-[0.65rem] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                POPULAR · INVESTIGATORS
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pt-1">
+                  <span className="font-mono text-xs font-bold text-[#ff70db] px-3 py-1 rounded-full bg-[#df0095]/20 border border-[#df0095]/30">
+                    MONTHLY PRO
+                  </span>
+                  <span className="text-2xl">🚀</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white font-mono">Monthly Pro</h3>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-mono font-black text-4xl text-white">₹499</span>
+                    <span className="text-sm text-white/60 font-sans">/ month</span>
+                  </div>
+                  <p className="text-xs text-white/70 font-sans mt-2 leading-relaxed">
+                    Designed for active station investigators, inspectors & cyber crime units.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-white/10 space-y-2.5 text-xs text-white/90 font-sans">
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span><strong>Unlimited</strong> FIR / Case Analysis</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span><strong>All Supported Sources</strong> (FIR, CDR, OSINT)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span><strong>Advanced AI</strong> Pattern Detection</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span>Hotspot Detection &amp; AI Insights</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span>Interactive Crime Map (Advanced)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span>Trend Analysis &amp; Report Export</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span><strong>2 Years</strong> Historical Data</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-[#df0095] shrink-0" />
+                    <span>Priority Processing &amp; Support</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/10">
+                <Link
+                  href="/overview"
+                  className="w-full inline-flex items-center justify-center py-3.5 rounded-full bg-gradient-to-r from-[#e002a2] via-[#df0095] to-[#c20084] text-white font-mono text-xs font-black uppercase tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                >
+                  Start Monthly Pro →
+                </Link>
+              </div>
+            </div>
+
+            {/* Yearly Pro Plan */}
+            <div className="rounded-3xl border border-purple-500/40 bg-[#0d0d18] p-7 sm:p-8 space-y-6 flex flex-col justify-between hover:border-purple-400 transition-all shadow-[0_0_30px_rgba(168,85,247,0.15)] relative">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[0.65rem] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                👑 BEST VALUE · 2 MONTHS FREE
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pt-1">
+                  <span className="font-mono text-xs font-bold text-purple-300 px-3 py-1 rounded-full bg-purple-950/40 border border-purple-500/30">
+                    YEARLY PRO
+                  </span>
+                  <span className="text-2xl">👑</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white font-mono">Yearly Pro</h3>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-mono font-black text-4xl text-white">₹4,999</span>
+                    <span className="text-sm text-white/60 font-sans">/ year</span>
+                  </div>
+                  <p className="text-xs text-white/70 font-sans mt-2 leading-relaxed">
+                    Maximum value for police commissionerates & intelligence divisions.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-white/10 space-y-2.5 text-xs text-white/80 font-sans">
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-purple-400 shrink-0" />
+                    <span><strong>Everything in Monthly Pro</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-purple-400 shrink-0" />
+                    <span><strong>5+ Years</strong> Historical Crime Data</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-purple-400 shrink-0" />
+                    <span>Save ₹1,000 (17% Annual Discount)</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-purple-400 shrink-0" />
+                    <span>Multi-Modal AI Correlation Suite</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-purple-400 shrink-0" />
+                    <span>High-Priority GPU Queue Allocation</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 text-purple-400 shrink-0" />
+                    <span>Dedicated Intelligence Support Desk</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/10">
+                <Link
+                  href="/overview"
+                  className="w-full inline-flex items-center justify-center py-3 rounded-full border border-purple-500/50 bg-purple-950/40 hover:bg-purple-900/50 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all"
+                >
+                  Get Yearly Pro →
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Detailed Downside Comparison Table */}
+          <div className="pt-4">
+            <div className="rounded-3xl border border-white/10 bg-[#090812]/90 backdrop-blur-xl p-6 sm:p-8 space-y-5 shadow-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
+                <div>
+                  <h3 className="text-xl font-mono font-black text-white uppercase tracking-tight">
+                    Detailed Capability Comparison
+                  </h3>
+                  <p className="text-xs text-white/60 font-sans mt-1">
+                    Side-by-side breakdown of features, data sources, and analytical limits.
+                  </p>
+                </div>
+                <span className="text-xs font-mono text-[#df0095] bg-pink-950/40 border border-[#df0095]/30 px-3 py-1 rounded-full w-fit">
+                  All Prices in INR (₹)
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-white font-mono text-xs uppercase tracking-wider">
+                      <th className="py-3.5 px-4 font-bold w-[34%]">Capability</th>
+                      <th className="py-3.5 px-4 font-bold text-center w-[20%] text-slate-300">🆓 Free</th>
+                      <th className="py-3.5 px-4 font-bold text-center w-[23%] text-[#ff70db] bg-pink-950/20">
+                        🚀 Monthly Pro
+                      </th>
+                      <th className="py-3.5 px-4 font-bold text-center w-[23%] text-purple-300">
+                        👑 Yearly Pro
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-sans">
+                    {[
+                      { feature: "Price", free: "₹0", monthly: "₹499 / month", yearly: "₹4,999 / year" },
+                      { feature: "Data Sources", free: "Limited", monthly: "All supported sources", yearly: "All supported sources" },
+                      { feature: "FIR / Case Analysis", free: "10 cases/month", monthly: "Unlimited", yearly: "Unlimited" },
+                      { feature: "Crime Pattern Detection", free: "Basic", monthly: "Advanced AI", yearly: "Advanced AI" },
+                      { feature: "Hotspot Detection", free: "Basic", monthly: "✓", yearly: "✓" },
+                      { feature: "AI Insights", free: "Limited", monthly: "✓", yearly: "✓" },
+                      { feature: "Interactive Crime Map", free: "Basic", monthly: "✓ Advanced", yearly: "✓ Advanced" },
+                      { feature: "Trend Analysis", free: "—", monthly: "✓", yearly: "✓" },
+                      { feature: "Reports & Export", free: "Limited", monthly: "✓", yearly: "✓" },
+                      { feature: "Historical Data", free: "30 days", monthly: "2 years", yearly: "5+ years" },
+                      { feature: "Priority Processing", free: "—", monthly: "✓", yearly: "✓" },
+                      { feature: "Support", free: "Community", monthly: "Priority", yearly: "Priority" },
+                    ].map((row, rIdx) => (
+                      <tr
+                        key={rIdx}
+                        className={rIdx % 2 === 1 ? "bg-white/[0.02]" : "bg-transparent"}
+                      >
+                        <td className="py-3 px-4 font-medium text-white/90">
+                          {row.feature}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono text-white/60">
+                          {row.free}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-[#ff70db] bg-pink-950/15">
+                          {row.monthly}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-purple-300">
+                          {row.yearly}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Enterprise Public Safety Deployment Tiers Header */}
+          <div className="pt-8 border-t border-white/10 text-center max-w-2xl mx-auto space-y-2">
+            <h3 className="text-xl font-mono font-black text-white uppercase tracking-tight">
+              Enterprise &amp; Sovereign Deployment
+            </h3>
+            <p className="text-xs text-white/60 font-sans">
+              For state police headquarters, state CID wings, and national defense intelligence agencies requiring dedicated on-premise air-gapped infrastructure.
             </p>
           </div>
 
