@@ -43,6 +43,15 @@ class EntityExtractionService:
         re.compile(r"\b(?:shopkeeper|store\s+manager|cashier|security\s+guard|pedestrian|victim|homeowner|watchman)\b", re.IGNORECASE),
     ]
 
+    NAMED_PERSON_PATTERNS = [
+        re.compile(r"\b(?:accused|suspect|perpetrator|culprit|associate|accomplice|conspirator)\s+(?:namely\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b", re.IGNORECASE),
+        re.compile(r"\b(?:victim|complainant|informant|eyewitness|witness)\s+(?:namely\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b", re.IGNORECASE),
+        re.compile(r"\b(?:identified\s+as\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b", re.IGNORECASE),
+        re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\s+(?:alias|@|a\.k\.a\.?)\s+([A-Z][a-z0-9_-]+)\b", re.IGNORECASE),
+        re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\s+(?:s/o|d/o|w/o)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b", re.IGNORECASE),
+        re.compile(r"\b(?:shri|smt\.?|mr\.?|mrs\.?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})\b", re.IGNORECASE),
+    ]
+
     ORGANIZATION_PATTERNS = [
         re.compile(r"\b(?:jewell?ery\s+(?:store|shop|showroom)|electronics?\s+store|retail\s+showroom|supermarket|grocery\s+store)\b", re.IGNORECASE),
         re.compile(r"\b(?:bank|atm|branch|hospital|corporate\s+office|tech\s+park|police\s+station|metro\s+station|hotel|restaurant)\b", re.IGNORECASE),
@@ -137,6 +146,10 @@ class EntityExtractionService:
         cls._match_patterns(cls.WEAPON_PATTERNS, text, extracted["weapons"])
         cls._match_patterns(cls.VEHICLE_PATTERNS, text, extracted["vehicles"])
         cls._match_patterns(cls.PERSON_PATTERNS, text, extracted["persons"])
+        for pattern in cls.NAMED_PERSON_PATTERNS:
+            for match in pattern.finditer(text):
+                val = match.group(1).strip(" ,.-")
+                cls._add_unique(extracted["persons"], val, text)
         cls._match_patterns(cls.ORGANIZATION_PATTERNS, text, extracted["organizations"])
         cls._match_patterns(cls.TIME_PATTERNS, text, extracted["times"])
         cls._match_patterns(cls.DATE_PATTERNS, text, extracted["dates"])
@@ -222,3 +235,56 @@ class EntityExtractionService:
             if not any(item.lower() != r.lower() and item.lower() in r.lower() for r in result):
                 result.append(item)
         return sorted(result)
+
+    @classmethod
+    def extract_structured_persons(cls, text: str) -> List[Dict[str, Any]]:
+        """
+        Extracts structured person entries with detected roles, aliases, and grounded sentence excerpts.
+        """
+        if not text or not text.strip():
+            return []
+
+        persons: List[Dict[str, Any]] = []
+        sentences = [s.strip() for s in re.split(r"[.\n;]+", text) if s.strip()]
+
+        seen_names = set()
+        for pattern in cls.NAMED_PERSON_PATTERNS:
+            for match in pattern.finditer(text):
+                name = match.group(1).strip(" ,.-")
+                if not name or len(name.split()) > 4:
+                    continue
+
+                clean_name = name.title()
+                if clean_name.lower() in seen_names:
+                    continue
+                seen_names.add(clean_name.lower())
+
+                matched_prefix = match.group(0).lower()
+                role = "PERSON_OF_INTEREST"
+                if any(w in matched_prefix for w in ("accused", "suspect", "perpetrator", "culprit", "conspirator")):
+                    role = "SUSPECT"
+                elif any(w in matched_prefix for w in ("victim", "complainant")):
+                    role = "VICTIM"
+                elif any(w in matched_prefix for w in ("witness", "eyewitness", "informant")):
+                    role = "WITNESS"
+
+                alias = None
+                if match.lastindex and match.lastindex >= 2:
+                    alias = match.group(2).strip()
+
+                excerpt = text
+                for s in sentences:
+                    if name in s:
+                        excerpt = s
+                        break
+
+                persons.append({
+                    "name": clean_name,
+                    "canonical_name": clean_name,
+                    "role": role,
+                    "aliases": [alias] if alias else [],
+                    "evidence_excerpt": excerpt,
+                    "confidence": 0.95
+                })
+
+        return persons

@@ -12,6 +12,9 @@ from sqlalchemy.orm import Session
 from app.models.crime import Crime
 from app.models.nlp_analysis import NlpAnalysis
 from app.models.ml_models import CrimePattern, CrimeCluster
+from app.models.person import Person, CrimePersonAssociation
+from app.models.telecom import PersonPhoneAssociation
+from app.services.centrality_service import CentralityService
 from app.services.embedding_service import EmbeddingService
 from app.services.qdrant_service import QdrantService
 from app.services.graph_query_service import GraphQueryService
@@ -21,7 +24,7 @@ from app.core.config import settings
 
 logger = logging.getLogger("connectdots_graph_rag")
 
-SYSTEM_GROUNDING_PROMPT = """You are an evidence-grounded crime analysis assistant for the ConnectDots system.
+INVESTIGATION_SYSTEM_PROMPT = """You are an evidence-grounded crime analysis assistant for the ConnectDots system.
 
 CRITICAL OPERATIONAL RULES:
 1. Use ONLY the evidence supplied in the structured context JSON.
@@ -41,13 +44,24 @@ CRITICAL OPERATIONAL RULES:
    ### Connections
    ### Evidence
    ### Uncertainty
+8. CENTRALITY & PERSON NETWORK LIMITATION:
+   Network centrality measures network topology (e.g. bridge/broker position, degree connectivity) within observed reports only. DO NOT indicate guilt, culpability, or criminal intent based on centrality metrics.
+9. HUMAN-IN-THE-LOOP INVESTIGATOR VALIDATION RULES:
+   a) Validated evidence: Describe as investigator-validated (e.g. "Investigator validation indicates that this relationship was reviewed and accepted based on the available evidence.").
+   b) AI-derived evidence: Must be explicitly described as AI-derived and pending review (e.g. "This relationship was identified by the system but has not yet been investigator-validated.").
+   c) Rejected evidence: Must NEVER support conclusions or findings (e.g. "This relationship was previously proposed by the system but was rejected during investigator review and is excluded from validated evidence.").
+   d) Never convert association into criminal guilt.
+   e) Never invent investigator decisions, evidence, or corroborations.
 """
+
+SYSTEM_GROUNDING_PROMPT = INVESTIGATION_SYSTEM_PROMPT
 
 
 class GraphRAGService:
     """
     Coordinates multi-database evidence retrieval, fusion, and grounded LLM synthesis.
     """
+    INVESTIGATION_SYSTEM_PROMPT = INVESTIGATION_SYSTEM_PROMPT
 
     @classmethod
     async def query(cls, db: Session, question: str) -> Dict[str, Any]:
@@ -203,11 +217,38 @@ class GraphRAGService:
                         "tower_location": c.location_or_tower
                     })
 
+        # Retrieve Key Individuals / Network Centrality Evidence
+        key_individuals_data = []
+        try:
+            from app.services.key_individual_service import KeyIndividualService
+            scope_type = "crime" if target_crime else "all"
+            scope_id = target_crime.id if target_crime else None
+            ki_res = KeyIndividualService.get_key_individuals(
+                db=db,
+                scope_type=scope_type,
+                scope_id=scope_id,
+                limit=5
+            )
+            for item in ki_res.get("items", []):
+                key_individuals_data.append({
+                    "person_id": item["person_id"],
+                    "name": item["canonical_name"],
+                    "degree_centrality": item["metrics"]["degree_centrality"],
+                    "betweenness_centrality": item["metrics"]["betweenness_centrality"],
+                    "pagerank": item["metrics"]["pagerank"],
+                    "connected_crimes": item["network_breakdown"]["connected_crimes"],
+                    "connected_people": item["network_breakdown"]["connected_people"],
+                    "connected_phones": item["network_breakdown"]["connected_phones"],
+                    "explanation": item.get("structural_explanation")
+                })
+        except Exception as e:
+            logger.warning(f"Key individual retrieval error in Graph RAG: {e}")
+
         # 3. Safeguard: Check if any evidence exists
-        if not target_crime and not similar_crimes_data and not graph_connections and not telecom_evidence:
+        if not target_crime and not similar_crimes_data and not graph_connections and not telecom_evidence and not key_individuals_data:
             return cls._empty_response(
                 "Insufficient evidence available in the current database records. "
-                "No incident matches, statistical clusters, or telecommunications records were found for this query."
+                "No incident matches, statistical clusters, key individuals, or telecommunications records were found for this query."
             )
 
         # 4. Evidence Fusion into Structured Object
@@ -226,6 +267,7 @@ class GraphRAGService:
             "supporting_patterns": supporting_patterns,
             "telecom_evidence": telecom_evidence,
             "telecom_calls": telecom_calls,
+            "key_individuals": key_individuals_data,
         }
 
         # 5. Build Grounded Prompt
@@ -433,4 +475,162 @@ Retrieved Structured Evidence:
                 "model": settings.LLM_MODEL,
                 "error": "INSUFFICIENT_EVIDENCE"
             }
+        }
+
+    @classmethod
+    def _format_context(cls, evidence: Dict[str, Any]) -> str:
+        """
+        Renders structured evidence into Markdown context for LLM synthesis.
+        """
+        sections = []
+
+        pc = evidence.get("primary_crime")
+        if pc:
+            sections.append(
+                f"### PRIMARY CRIME INCIDENT\n"
+                f"- ID: {pc.get('id')}\n"
+                f"- Record ID: {pc.get('record_id')}\n"
+                f"- Category: {pc.get('category')}\n"
+                f"- Location: {pc.get('location_name')}"
+            )
+
+        kis = evidence.get("key_individuals", [])
+        if kis:
+            ki_lines = ["### KEY INDIVIDUALS & PERSON NETWORK (CENTRALITY INTELLIGENCE)"]
+            for ki in kis:
+                name = ki.get("canonical_name") or ki.get("name", "Unknown")
+                pid = ki.get("person_id", "")
+                deg = ki.get("degree_centrality", 0.0)
+                btw = ki.get("betweenness_centrality", 0.0)
+                pr = ki.get("pagerank", 0.0)
+                phones = ki.get("associated_phones", [])
+                phones_str = ", ".join(phones) if phones else "None"
+                ki_lines.append(
+                    f"- {name} (ID: {pid}):\n"
+                    f"  * Role: {ki.get('role', 'PERSON_OF_INTEREST')}\n"
+                    f"  * Degree Centrality: {deg}\n"
+                    f"  * Betweenness Centrality: {btw}\n"
+                    f"  * PageRank: {pr}\n"
+                    f"  * Associated Phones: {phones_str}"
+                )
+            sections.append("\n".join(ki_lines))
+
+        sims = evidence.get("similar_crimes", [])
+        if sims:
+            sections.append("### SIMILAR INCIDENTS\n" + "\n".join(f"- {s.get('record_id') or s.get('crime_id')} ({s.get('category')})" for s in sims))
+
+        telecom = evidence.get("telecom_intelligence") or evidence.get("telecom_evidence", [])
+        if telecom:
+            sections.append("### TELECOMMUNICATIONS INTELLIGENCE\n" + "\n".join(f"- {str(t)}" for t in telecom))
+
+        g_conns = evidence.get("graph_connections", [])
+        if g_conns:
+            val_lines = []
+            pending_lines = []
+            rej_lines = []
+            for g in g_conns:
+                st = g.get("status") or g.get("properties", {}).get("status", "AI_DERIVED")
+                c_desc = f"{g.get('source_crime_id') or g.get('source')} -[{g.get('connection_type') or g.get('relation')}]-> {g.get('target_crime_id') or g.get('target')}"
+                if st == "VALIDATED":
+                    val_lines.append(f"- [INVESTIGATOR-VALIDATED] {c_desc} (Confirmed by investigator)")
+                elif st == "REJECTED":
+                    rej_lines.append(f"- [REJECTED BY INVESTIGATOR] {c_desc} (Reason: {g.get('rejection_reason', 'Insufficient evidence')})")
+                else:
+                    pending_lines.append(f"- [AI-DERIVED / PENDING REVIEW] {c_desc} (Confidence: {g.get('confidence', 0.85)})")
+
+            if val_lines:
+                sections.append("### INVESTIGATOR-VALIDATED CONNECTIONS\n" + "\n".join(val_lines))
+            if pending_lines:
+                sections.append("### AI-DERIVED CONNECTIONS (PENDING REVIEW)\n" + "\n".join(pending_lines))
+            if rej_lines:
+                sections.append("### REJECTED CONNECTIONS (EXCLUDED FROM ACTIVE EVIDENCE)\n" + "\n".join(rej_lines))
+
+        return "\n\n".join(sections)
+
+    @classmethod
+    def investigate_crime(cls, crime_id: str, db: Session, force_mock: bool = False) -> Dict[str, Any]:
+        """
+        Coordinates grounded crime investigation synthesizing primary crime,
+        associated key individuals, centrality, and telecom linkages.
+        """
+        import asyncio
+        crime = db.query(Crime).filter((Crime.id == crime_id) | (Crime.record_id == crime_id)).first()
+        cid = crime.id if crime else crime_id
+
+        # 1. Fetch person associations
+        crime_assocs = db.query(CrimePersonAssociation).filter(CrimePersonAssociation.crime_id == cid).all()
+        
+        # 2. Centrality metrics
+        centrality_res = CentralityService.compute_network_metrics(scope_type="crime", scope_id=cid)
+        metrics_by_pid = {n["person_id"]: n for n in centrality_res.get("nodes", [])}
+
+        key_individuals = []
+        for ca in crime_assocs:
+            p = db.query(Person).filter(Person.id == ca.person_id).first()
+            p_name = p.canonical_name if p else ca.person_id.replace("person:", "").title()
+            p_node = metrics_by_pid.get(ca.person_id, {})
+            p_metrics = p_node.get("metrics", {})
+
+            # phones
+            phone_assocs = db.query(PersonPhoneAssociation).filter(
+                (PersonPhoneAssociation.person_id == ca.person_id) |
+                (PersonPhoneAssociation.person_name == p_name)
+            ).all()
+            associated_phones = [pa.phone_id.replace("phone:", "") for pa in phone_assocs]
+
+            key_individuals.append({
+                "person_id": ca.person_id,
+                "canonical_name": p_name,
+                "role": ca.role,
+                "degree_centrality": p_node.get("degree_centrality", p_metrics.get("degree_centrality", 0.0)),
+                "betweenness_centrality": p_node.get("betweenness_centrality", p_metrics.get("betweenness_centrality", 0.0)),
+                "pagerank": p_node.get("pagerank", p_metrics.get("pagerank", 0.0)),
+                "associated_cases": 1,
+                "associated_phones": associated_phones,
+                "structural_notes": p_node.get("structural_explanation", "")
+            })
+
+        evidence_used = {
+            "primary_crime": {
+                "id": crime.id if crime else cid,
+                "record_id": crime.record_id if crime else cid,
+                "category": crime.category if crime else "UNKNOWN",
+                "location_name": crime.location_name if crime else "Unknown",
+                "description": crime.description if crime else ""
+            } if crime else None,
+            "similar_crimes": [],
+            "graph_connections": [],
+            "telecom_intelligence": [],
+            "key_individuals": key_individuals
+        }
+
+        context_prompt = cls._format_context(evidence_used)
+        user_prompt = f"```json\n{json.dumps(evidence_used, indent=2)}\n```\n\nSynthesize investigation dossier based on evidence:\n{context_prompt}"
+
+        provider = get_llm_provider(force_mock=force_mock)
+        try:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import nest_asyncio
+                nest_asyncio.apply()
+                synthesis = loop.run_until_complete(provider.generate(prompt=user_prompt, system_prompt=cls.INVESTIGATION_SYSTEM_PROMPT))
+            else:
+                synthesis = asyncio.run(provider.generate(prompt=user_prompt, system_prompt=cls.INVESTIGATION_SYSTEM_PROMPT))
+        except Exception as e:
+            logger.warning(f"LLM synthesis fallback: {e}")
+            synthesis = (
+                "### Summary\nInvestigation analysis generated from grounded records.\n\n"
+                "### Connections\nObserved connections across incidents and entities.\n\n"
+                "### Evidence\nVerified evidence items recorded in database.\n\n"
+                "### Uncertainty\nAnalysis is strictly bounded by observed network topology."
+            )
+
+        return {
+            "crime_id": cid,
+            "evidence_used": evidence_used,
+            "synthesis": synthesis
         }

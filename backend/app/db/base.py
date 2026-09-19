@@ -16,6 +16,15 @@ from app.models.telecom import (
     CrimePhoneAssociation,
     PersonPhoneAssociation,
 )
+from app.models.person import (
+    Person,
+    CrimePersonAssociation,
+    NetworkCentralityResult,
+)
+from app.models.review import (
+    InvestigationRelationshipReview,
+    InvestigationReviewHistory,
+)
 
 __all__ = [
     "Base",
@@ -24,5 +33,7 @@ __all__ = [
     "MlAnalysisJob", "CrimeCluster", "CrimeClusterMember",
     "CrimeHotspot", "CrimeAnomaly", "CrimePattern", "CrimeTrend",
     "PhoneNumber", "CdrRecord", "CrimePhoneAssociation", "PersonPhoneAssociation",
+    "Person", "CrimePersonAssociation", "NetworkCentralityResult",
+    "InvestigationRelationshipReview", "InvestigationReviewHistory",
 ]
 

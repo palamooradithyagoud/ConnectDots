@@ -25,6 +25,10 @@ class Neo4jService:
     # In-memory graph representation used when Neo4j is unavailable (e.g. during offline unit tests)
     _mock_nodes: Dict[str, Dict[str, Any]] = {}
     _mock_relationships: List[Dict[str, Any]] = []
+    _store: Dict[str, Any] = {
+        "nodes": _mock_nodes,
+        "relationships": _mock_relationships
+    }
 
     @classmethod
     def get_driver(cls) -> Optional[Driver]:
@@ -88,7 +92,11 @@ class Neo4jService:
     @classmethod
     def is_fallback_mode(cls) -> bool:
         """Returns true if currently operating in in-memory fallback mode."""
-        return cls._force_fallback or cls._in_memory_fallback or (cls._driver is None)
+        if cls._force_fallback:
+            return True
+        if cls._driver is None and not cls._in_memory_fallback:
+            cls.get_driver()
+        return cls._in_memory_fallback or (cls._driver is None)
 
     @classmethod
     def close(cls):
@@ -219,22 +227,45 @@ class Neo4jService:
             return False
 
     @classmethod
+    def upsert_person(cls, person_data: Dict[str, Any]) -> bool:
+        """
+        Idempotently creates or updates a Person node.
+        """
+        raw_id = person_data.get("id", "")
+        person_id = f"person:{raw_id}" if not raw_id.startswith("person:") else raw_id
+        props = {
+            "id": person_id,
+            "canonical_name": person_data.get("canonical_name") or person_data.get("name", "Unknown"),
+            "name": person_data.get("canonical_name") or person_data.get("name", "Unknown"),
+            "aliases": person_data.get("aliases", []),
+            "source_provenance": person_data.get("source_provenance", "FIR_NARRATIVE"),
+            "confidence": float(person_data.get("confidence", 1.0)),
+        }
+        return cls.upsert_entity(label="Person", entity_id=person_id, properties=props)
+
+    @classmethod
     def create_relationship(
         cls,
-        source_id: str,
-        rel_type: str,
-        target_id: str,
+        source_id: str = "",
+        rel_type: str = "",
+        target_id: str = "",
         properties: Optional[Dict[str, Any]] = None,
-        confidence_type: str = "explicit"
+        confidence_type: str = "explicit",
+        from_id: Optional[str] = None,
+        to_id: Optional[str] = None
     ) -> bool:
         """
         Idempotently creates a directed relationship between two nodes.
         confidence_type: 'explicit' (direct facts from NLP) or 'derived' (analytical).
         """
+        s_id = from_id if from_id is not None else source_id
+        t_id = to_id if to_id is not None else target_id
+
         # Whitelist allowed relationship types to prevent Cypher injection
         allowed_rels = {
-            "OCCURRED_AT", "INVOLVES_PERSON", "INVOLVES_ORGANIZATION",
-            "USED_VEHICLE", "USED_WEAPON", "EXHIBITS_MO",
+            "OCCURRED_AT", "INVOLVES_PERSON", "MENTIONS_PERSON", "INVOLVED_IN",
+            "CO_OCCURS_WITH", "ASSOCIATED_WITH", "AFFILIATED_WITH",
+            "INVOLVES_ORGANIZATION", "USED_VEHICLE", "USED_WEAPON", "EXHIBITS_MO",
             "BELONGS_TO", "SUPPORTS",
             "SEMANTICALLY_SIMILAR", "SHARES_VEHICLE", "SHARES_WEAPON",
             "SHARES_MO", "SAME_LOCATION", "SAME_CLUSTER",
@@ -246,25 +277,33 @@ class Neo4jService:
 
         props = properties.copy() if properties else {}
         props["confidence_type"] = confidence_type
+        if "status" not in props:
+            props["status"] = "EXPLICIT" if confidence_type == "explicit" else "AI_DERIVED"
         props["created_at"] = props.get("created_at", datetime.now(timezone.utc).isoformat())
 
         if cls.is_fallback_mode():
             # Deduplicate in fallback
             for r in cls._mock_relationships:
-                if r["source"] == source_id and r["relation"] == rel_type and r["target"] == target_id:
+                r_src = r.get("source") or r.get("from_id")
+                r_tgt = r.get("target") or r.get("to_id")
+                r_rel = r.get("relation") or r.get("type")
+                if r_src == s_id and r_rel == rel_type and r_tgt == t_id:
                     r["properties"].update(props)
                     return True
             cls._mock_relationships.append({
-                "source": source_id,
+                "source": s_id,
+                "from_id": s_id,
                 "relation": rel_type,
-                "target": target_id,
+                "type": rel_type,
+                "target": t_id,
+                "to_id": t_id,
                 "properties": props
             })
             return True
 
         driver = cls.get_driver()
-        src_raw = source_id.split(":", 1)[1] if ":" in source_id else source_id
-        tgt_raw = target_id.split(":", 1)[1] if ":" in target_id else target_id
+        src_raw = s_id.split(":", 1)[1] if ":" in s_id else s_id
+        tgt_raw = t_id.split(":", 1)[1] if ":" in t_id else t_id
 
         query = f"""
         MATCH (a) WHERE a.id = $source_id OR a.id = $src_raw
@@ -279,16 +318,127 @@ class Neo4jService:
                 session.run(
                     query,
                     {
-                        "source_id": source_id,
+                        "source_id": s_id,
                         "src_raw": src_raw,
-                        "target_id": target_id,
+                        "target_id": t_id,
                         "tgt_raw": tgt_raw,
                         "props": props
                     }
                 )
             return True
         except Exception as e:
-            logger.error(f"Error creating relationship {source_id} -[:{rel_type}]-> {target_id}: {e}")
+            logger.error(f"Error creating relationship {s_id} -[:{rel_type}]-> {t_id}: {e}")
+            return False
+
+    @classmethod
+    def update_relationship_status(
+        cls,
+        source_id: str,
+        rel_type: str,
+        target_id: str,
+        status: str,
+        reviewer_id: Optional[str] = None,
+        review_id: Optional[str] = None,
+        new_rel_type: Optional[str] = None
+    ) -> bool:
+        """
+        Updates the review validation status of a relationship in Neo4j.
+        Supports both in-memory fallback and live Neo4j.
+        """
+        s_id = source_id.strip()
+        t_id = target_id.strip()
+        r_type = rel_type.strip()
+        target_status = status.strip().upper()
+
+        if cls.is_fallback_mode():
+            matched = False
+            for r in cls._mock_relationships:
+                r_src = r.get("source") or r.get("from_id") or ""
+                r_tgt = r.get("target") or r.get("to_id") or ""
+                r_rel = r.get("relation") or r.get("type") or ""
+
+                is_match = (
+                    (r_src == s_id or r_src.endswith(f":{s_id}") or s_id.endswith(f":{r_src}")) and
+                    (r_tgt == t_id or r_tgt.endswith(f":{t_id}") or t_id.endswith(f":{r_tgt}")) and
+                    (r_rel == r_type)
+                )
+                # Also check reverse match if bidirectional
+                if not is_match:
+                    is_match = (
+                        (r_src == t_id or r_src.endswith(f":{t_id}") or t_id.endswith(f":{r_src}")) and
+                        (r_tgt == s_id or r_tgt.endswith(f":{s_id}") or s_id.endswith(f":{r_tgt}")) and
+                        (r_rel == r_type)
+                    )
+
+                if is_match:
+                    if "properties" not in r:
+                        r["properties"] = {}
+                    r["properties"]["status"] = target_status
+                    r["properties"]["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+                    if reviewer_id:
+                        r["properties"]["reviewer_id"] = reviewer_id
+                    if review_id:
+                        r["properties"]["review_id"] = review_id
+                    if new_rel_type:
+                        r["relation"] = new_rel_type
+                        r["type"] = new_rel_type
+                        r["properties"]["original_relationship_type"] = r_type
+                    matched = True
+
+            return matched
+
+        driver = cls.get_driver()
+        if not driver:
+            return False
+
+        src_raw = s_id.split(":", 1)[1] if ":" in s_id else s_id
+        tgt_raw = t_id.split(":", 1)[1] if ":" in t_id else t_id
+
+        try:
+            with driver.session(database=settings.NEO4J_DATABASE) as session:
+                if new_rel_type:
+                    # Update relationship type: delete old and merge new
+                    query = f"""
+                    MATCH (a)-[r:{r_type}]->(b)
+                    WHERE (a.id = $source_id OR a.id = $src_raw) AND (b.id = $target_id OR b.id = $tgt_raw)
+                    WITH a, b, r, properties(r) as old_props
+                    DELETE r
+                    MERGE (a)-[new_r:{new_rel_type}]->(b)
+                    SET new_r += old_props,
+                        new_r.status = $status,
+                        new_r.original_type = $r_type,
+                        new_r.reviewer_id = $reviewer_id,
+                        new_r.review_id = $review_id,
+                        new_r.reviewed_at = datetime()
+                    RETURN type(new_r) as rel
+                    """
+                else:
+                    query = f"""
+                    MATCH (a)-[r:{r_type}]->(b)
+                    WHERE (a.id = $source_id OR a.id = $src_raw) AND (b.id = $target_id OR b.id = $tgt_raw)
+                    SET r.status = $status,
+                        r.reviewer_id = $reviewer_id,
+                        r.review_id = $review_id,
+                        r.reviewed_at = datetime()
+                    RETURN count(r) as updated
+                    """
+
+                session.run(
+                    query,
+                    {
+                        "source_id": s_id,
+                        "src_raw": src_raw,
+                        "target_id": t_id,
+                        "tgt_raw": tgt_raw,
+                        "status": target_status,
+                        "r_type": r_type,
+                        "reviewer_id": reviewer_id,
+                        "review_id": review_id,
+                    }
+                )
+            return True
+        except Exception as e:
+            logger.error(f"Error updating relationship status {s_id} -[:{r_type}]-> {t_id}: {e}")
             return False
 
     @classmethod

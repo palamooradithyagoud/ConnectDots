@@ -27,6 +27,9 @@ interface InteractiveGraphProps {
   onSelectNode: (node: GraphNode | null) => void;
   onSelectEdge: (edge: GraphEdge | null) => void;
   onDrillDownCrime?: (crimeId: string) => void;
+  highlightedNodeIds?: Set<string>;
+  highlightedEdgeIds?: Set<string>;
+  onLaunchInvestigation?: (entityId: string, label: string) => void;
 }
 
 interface PositionedNode extends GraphNode {
@@ -42,6 +45,9 @@ export default function InteractiveGraph({
   onSelectNode,
   onSelectEdge,
   onDrillDownCrime,
+  highlightedNodeIds,
+  highlightedEdgeIds,
+  onLaunchInvestigation,
 }: InteractiveGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState<number>(1);
@@ -183,7 +189,7 @@ export default function InteractiveGraph({
     const p = node.properties || {};
     if (node.label === "Crime") return p.record_id || p.category || node.id;
     if (node.label === "Phone") return p.number || node.id.replace("phone:", "");
-    return p.name || p.pattern || p.description || node.id.split(":").pop() || node.id;
+    return p.canonical_name || p.name || p.pattern || p.description || node.id.split(":").pop() || node.id;
   };
 
   // Drag and pan handlers
@@ -294,11 +300,17 @@ export default function InteractiveGraph({
           <span className="h-2 w-2 rounded-full bg-orange-500" /> Pattern
         </div>
         <div className="h-3 w-px bg-white/20" />
-        <div className="flex items-center gap-1.5 text-emerald-400">
-          <span className="h-0.5 w-3 bg-emerald-400" /> Explicit
+        <div className="flex items-center gap-1.5 text-emerald-400" title="Investigator Validated / Explicit Fact">
+          <span className="h-0.5 w-3 bg-emerald-400" /> Validated / Explicit
         </div>
-        <div className="flex items-center gap-1.5 text-cyan-400">
-          <span className="h-0.5 w-3 border-b border-dashed border-cyan-400" /> Derived
+        <div className="flex items-center gap-1.5 text-cyan-400" title="AI-Derived hypothesis pending review">
+          <span className="h-0.5 w-3 border-b border-dashed border-cyan-400" /> AI-Derived (Pending)
+        </div>
+        <div className="flex items-center gap-1.5 text-indigo-400" title="Modified by investigator">
+          <span className="h-0.5 w-3 bg-indigo-400" /> Modified
+        </div>
+        <div className="flex items-center gap-1.5 text-rose-400" title="Rejected during review">
+          <span className="h-0.5 w-3 border-b border-dotted border-rose-400" /> Rejected
         </div>
       </div>
 
@@ -328,10 +340,27 @@ export default function InteractiveGraph({
             const tgtNode = nodeMap.get(edge.target);
             if (!srcNode || !tgtNode) return null;
 
-            const isExplicit = edge.properties?.confidence_type === "explicit";
+            const p = edge.properties || {};
+            const st = p.status || (p.confidence_type === "explicit" ? "EXPLICIT" : "AI_DERIVED");
             const isSelected = selectedEdge === edge;
-            const strokeColor = isExplicit ? "rgba(16, 185, 129, 0.6)" : "rgba(34, 211, 238, 0.65)";
-            const strokeWidth = isSelected ? 3.5 : isExplicit ? 2 : 1.8;
+
+            let strokeColor = "rgba(34, 211, 238, 0.65)"; // AI-derived cyan
+            let isDashed = true;
+            let strokeWidth = isSelected ? 3.5 : 1.8;
+
+            if (st === "VALIDATED" || st === "EXPLICIT") {
+              strokeColor = "rgba(16, 185, 129, 0.85)";
+              isDashed = false;
+              strokeWidth = isSelected ? 3.5 : 2.2;
+            } else if (st === "MODIFIED") {
+              strokeColor = "rgba(99, 102, 241, 0.85)";
+              isDashed = false;
+              strokeWidth = isSelected ? 3.5 : 2.2;
+            } else if (st === "REJECTED") {
+              strokeColor = "rgba(244, 63, 94, 0.5)";
+              isDashed = true;
+              strokeWidth = isSelected ? 3.0 : 1.4;
+            }
 
             const midX = (srcNode.x + tgtNode.x) / 2;
             const midY = (srcNode.y + tgtNode.y) / 2;
@@ -353,7 +382,7 @@ export default function InteractiveGraph({
                   y2={tgtNode.y}
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
-                  strokeDasharray={isExplicit ? "none" : "5,4"}
+                  strokeDasharray={isDashed ? "5,4" : "none"}
                   className="transition-all hover:stroke-white"
                 />
 
@@ -394,6 +423,16 @@ export default function InteractiveGraph({
             const isCrime = node.label === "Crime";
             const radius = isCrime ? 24 : 18;
 
+            const isHighlighted = Boolean(
+              highlightedNodeIds?.has(node.id) ||
+              (node.properties?.record_id && highlightedNodeIds?.has(node.properties.record_id)) ||
+              (node.properties?.number && highlightedNodeIds?.has(node.properties.number)) ||
+              (node.properties?.canonical_name && highlightedNodeIds?.has(node.properties.canonical_name)) ||
+              (node.id.startsWith("crime:") && highlightedNodeIds?.has(node.id.replace("crime:", ""))) ||
+              (node.id.startsWith("phone:") && highlightedNodeIds?.has(node.id.replace("phone:", ""))) ||
+              (node.id.startsWith("person:") && highlightedNodeIds?.has(node.id.replace("person:", "")))
+            );
+
             return (
               <g
                 key={node.id}
@@ -407,6 +446,19 @@ export default function InteractiveGraph({
                 onMouseEnter={() => setHoveredNodeId(node.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}
               >
+                {/* AI Discovery Beacon Ring */}
+                {isHighlighted && (
+                  <circle
+                    r={radius + 12}
+                    fill="none"
+                    stroke="#22d3ee"
+                    strokeWidth="2"
+                    strokeDasharray="4,3"
+                    className="animate-spin"
+                    opacity="0.9"
+                  />
+                )}
+
                 {/* Glow ring when selected or hovered */}
                 {(isSelected || isHovered) && (
                   <circle

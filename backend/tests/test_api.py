@@ -44,6 +44,13 @@ def override_get_db():
         db.close()
 
 
+import pytest
+
+@pytest.fixture(autouse=True)
+def setup_api_db():
+    app.dependency_overrides[get_db] = override_get_db
+    yield
+
 app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
@@ -73,8 +80,11 @@ CR-TEST-102,BURGLARY,Indiranagar,2026-03-02,02:00:00,999.0,77.6408,Invalid lat,P
 
 
 def test_commit_import_csv():
-    csv_content = """record_id,crime_type,location,date,time,latitude,longitude,description,source
-CR-COMMIT-001,THEFT,Brigade Road,2026-03-05,11:30:00,12.9733,77.6074,Committed record,Police
+    import uuid
+    uid = uuid.uuid4().hex[:6]
+    rec_id = f"CR-COMMIT-{uid}"
+    csv_content = f"""record_id,crime_type,location,date,time,latitude,longitude,description,source
+{rec_id},THEFT,Brigade Road,2026-03-05,11:30:00,12.9733,77.6074,Committed record,Police
 """
     files = {"file": ("commit.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")}
     response = client.post("/api/v1/crimes/import?dry_run=false", files=files)
@@ -85,9 +95,9 @@ CR-COMMIT-001,THEFT,Brigade Road,2026-03-05,11:30:00,12.9733,77.6074,Committed r
     assert data["batch_id"] is not None
 
     # Verify query
-    query_res = client.get("/api/v1/crimes?search=CR-COMMIT-001")
+    query_res = client.get(f"/api/v1/crimes?search={rec_id}")
     assert query_res.status_code == 200
     items = query_res.json()["items"]
     assert len(items) == 1
-    assert items[0]["record_id"] == "CR-COMMIT-001"
+    assert items[0]["record_id"] == rec_id
     assert items[0]["category"] == "THEFT"

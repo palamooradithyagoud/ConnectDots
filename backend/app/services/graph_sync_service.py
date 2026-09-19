@@ -23,6 +23,7 @@ from app.models.crime import Crime
 from app.models.nlp_analysis import NlpAnalysis
 from app.models.ml_models import CrimeCluster, CrimeClusterMember, CrimePattern
 from app.models.telecom import PhoneNumber, CdrRecord, CrimePhoneAssociation, PersonPhoneAssociation
+from app.models.person import Person, CrimePersonAssociation
 from app.services.neo4j_service import Neo4jService
 from app.services.graph_ready_service import GraphReadyService
 from app.services.embedding_service import EmbeddingService
@@ -402,18 +403,71 @@ class GraphSyncService:
             crime_to_phones[cpa.crime_id].add(norm_num)
             phone_to_crimes[norm_num].add(cpa.crime_id)
 
-        # C. Sync Person-Phone associations
+        # C. Sync Person Entities from Relational Database
+        persons = db.query(Person).all()
+        persons_synced = 0
+        for person in persons:
+            Neo4jService.upsert_person({
+                "id": person.id,
+                "canonical_name": person.canonical_name,
+                "aliases": person.aliases or [],
+                "source_provenance": person.source_provenance,
+                "confidence": person.confidence
+            })
+            entities_synced += 1
+            persons_synced += 1
+
+        # D. Sync Crime-Person Associations
+        crime_person_assocs = db.query(CrimePersonAssociation).all()
+        crime_to_persons: Dict[str, Set[str]] = defaultdict(set)
+        for cpa in crime_person_assocs:
+            c_node_id = f"crime:{cpa.crime_id}"
+            p_node_id = cpa.person_id if cpa.person_id.startswith("person:") else f"person:{cpa.person_id}"
+            Neo4jService.create_relationship(
+                source_id=c_node_id,
+                rel_type="MENTIONS_PERSON",
+                target_id=p_node_id,
+                properties={
+                    "role": cpa.role,
+                    "confidence": float(cpa.extraction_confidence or 0.9),
+                    "relationship_type": cpa.relationship_type,
+                    "evidence_excerpt": cpa.evidence_excerpt or ""
+                },
+                confidence_type="explicit"
+            )
+            explicit_rels += 1
+            crime_to_persons[cpa.crime_id].add(p_node_id)
+
+        # Derived Cross-Person Links: Co-occurrence in same crime
+        for c_id, p_set in crime_to_persons.items():
+            p_list = sorted(list(p_set))
+            for i in range(len(p_list)):
+                for j in range(i + 1, len(p_list)):
+                    pair_key = (p_list[i], p_list[j], "CO_OCCURS_WITH")
+                    if pair_key not in derived_pairs_seen:
+                        derived_pairs_seen.add(pair_key)
+                        Neo4jService.create_relationship(
+                            source_id=p_list[i],
+                            rel_type="CO_OCCURS_WITH",
+                            target_id=p_list[j],
+                            properties={"source_crime_id": c_id, "confidence": 0.85},
+                            confidence_type="derived"
+                        )
+                        derived_rels += 1
+
+        # E. Sync Person-Phone associations
         person_phone_assocs = db.query(PersonPhoneAssociation).all()
+        phone_to_persons: Dict[str, Set[str]] = defaultdict(set)
         for ppa in person_phone_assocs:
             norm_num = phone_id_to_norm.get(ppa.phone_id)
             if not norm_num:
                 continue
             phone_node_id = f"phone:{norm_num}"
-            person_node_id = f"person:{ppa.person_name.strip().replace(' ', '_').lower()}"
+            person_node_id = ppa.person_id if (ppa.person_id and ppa.person_id.startswith("person:")) else f"person:{ppa.person_name.strip().replace(' ', '_').lower()}"
             Neo4jService.upsert_entity(
                 label="Person",
                 entity_id=person_node_id,
-                properties={"description": ppa.person_name.strip()}
+                properties={"name": ppa.person_name.strip(), "canonical_name": ppa.person_name.strip(), "description": ppa.person_name.strip()}
             )
             Neo4jService.create_relationship(
                 source_id=person_node_id,
@@ -427,6 +481,24 @@ class GraphSyncService:
                 confidence_type=ppa.confidence_type or "derived"
             )
             explicit_rels += 1
+            phone_to_persons[phone_node_id].add(person_node_id)
+
+        # Derived Cross-Person Links: Shared Phone
+        for ph_node_id, p_set in phone_to_persons.items():
+            p_list = sorted(list(p_set))
+            for i in range(len(p_list)):
+                for j in range(i + 1, len(p_list)):
+                    pair_key = (p_list[i], p_list[j], "SHARES_PHONE")
+                    if pair_key not in derived_pairs_seen:
+                        derived_pairs_seen.add(pair_key)
+                        Neo4jService.create_relationship(
+                            source_id=p_list[i],
+                            rel_type="SHARES_PHONE",
+                            target_id=p_list[j],
+                            properties={"phone_id": ph_node_id, "confidence": 0.95},
+                            confidence_type="derived"
+                        )
+                        derived_rels += 1
 
         # D. Aggregate and sync CDR CALLS relationships between Phones
         cdr_records = db.query(CdrRecord).all()
@@ -512,6 +584,7 @@ class GraphSyncService:
             "status": "completed",
             "crimes_synced": crimes_synced,
             "entities_synced": entities_synced,
+            "persons_synced": persons_synced,
             "explicit_relationships_created": explicit_rels,
             "derived_relationships_created": derived_rels,
             "phones_synced": phones_synced,

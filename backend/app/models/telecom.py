@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Text,
     Integer,
+    Boolean,
     ForeignKey,
     JSON,
     Index,
@@ -38,10 +39,14 @@ class PhoneNumber(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     normalized_number = Column(String(32), unique=True, index=True, nullable=False)  # E.164 (e.g. +919876543210)
+    raw_number = Column(String(50), nullable=True)
     country_code = Column(String(8), nullable=True, index=True)                     # e.g. "91"
     national_number = Column(String(20), nullable=True, index=True)                 # e.g. "9876543210"
     number_type = Column(String(50), nullable=True)                                 # MOBILE, FIXED_LINE, VOIP, etc.
     carrier = Column(String(100), nullable=True)
+    circle = Column(String(100), nullable=True)
+    line_type = Column(String(50), nullable=True)
+    is_valid = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -142,6 +147,7 @@ class PersonPhoneAssociation(Base):
     __tablename__ = "person_phone_associations"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    person_id = Column(String(64), ForeignKey("persons.id", ondelete="CASCADE"), nullable=True, index=True)
     person_name = Column(String(255), nullable=False, index=True)
     phone_id = Column(String(36), ForeignKey("phone_numbers.id", ondelete="CASCADE"), nullable=False, index=True)
     crime_id = Column(String(36), ForeignKey("crimes.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -152,6 +158,7 @@ class PersonPhoneAssociation(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
+    person = relationship("Person", back_populates="phone_associations")
     phone = relationship("PhoneNumber", back_populates="person_associations")
     crime = relationship("Crime")
 

@@ -114,15 +114,20 @@ class GraphReadyService:
 
         # 6. Persons / Suspects
         for p in entities.get("persons", []):
-            p_id = f"person:{p.strip().replace(' ', '_').lower()}"
+            clean_p = p.strip()
+            p_id = f"person:{clean_p.replace(' ', '_').lower()}"
             nodes.append({
                 "id": p_id,
-                "label": "PersonOfInterest",
-                "properties": {"description": p.strip()}
+                "label": "Person",
+                "properties": {
+                    "name": clean_p,
+                    "canonical_name": clean_p,
+                    "description": clean_p
+                }
             })
             relationships.append({
                 "source": crime_node_id,
-                "relation": "INVOLVES_PERSON",
+                "relation": "MENTIONS_PERSON",
                 "target": p_id
             })
 

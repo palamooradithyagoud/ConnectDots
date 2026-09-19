@@ -25,6 +25,11 @@ class TelecomAnalyticsService:
     """
 
     @classmethod
+    def get_phone_metrics(cls, db: Session, phone_id_or_number: str) -> Optional[Dict[str, Any]]:
+        """Alias for get_phone_profile."""
+        return cls.get_phone_profile(db, phone_id_or_number)
+
+    @classmethod
     def get_phone_profile(cls, db: Session, phone_id_or_number: str) -> Optional[Dict[str, Any]]:
         """
         Retrieves complete telecommunications profile, call volumes, contact breakdown,

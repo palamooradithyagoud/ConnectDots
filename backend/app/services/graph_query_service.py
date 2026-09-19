@@ -22,10 +22,12 @@ class GraphQueryService:
         cls,
         crime_id: str,
         depth: int = 2,
-        max_nodes: int = 50
+        max_nodes: int = 50,
+        include_rejected: bool = False
     ) -> Dict[str, Any]:
         """
         Retrieves the connected neighborhood for a given crime ID up to specified depth.
+        By default, suppresses REJECTED relationships unless include_rejected is True.
         Returns:
             {"nodes": [...], "edges": [...], "center_node_id": "crime:..."}
         """
@@ -49,6 +51,11 @@ class GraphQueryService:
                     continue
 
                 for rel in Neo4jService._mock_relationships:
+                    # Filter rejected edges unless in audit mode
+                    rel_status = rel.get("properties", {}).get("status")
+                    if rel_status == "REJECTED" and not include_rejected:
+                        continue
+
                     src = rel["source"]
                     tgt = rel["target"]
                     if src == curr_id or tgt == curr_id:
@@ -73,9 +80,10 @@ class GraphQueryService:
         raw_id = clean_crime_id.replace("crime:", "")
         prefixed_id = f"crime:{raw_id}"
 
+        rejection_filter = "" if include_rejected else "AND ALL(x IN r WHERE coalesce(x.status, '') <> 'REJECTED')"
         query = f"""
         MATCH path = (start:Crime)-[r*1..{depth}]-(neighbor)
-        WHERE start.id = $raw_id OR start.id = $prefixed_id
+        WHERE (start.id = $raw_id OR start.id = $prefixed_id) {rejection_filter}
         WITH start, r, neighbor, nodes(path) as path_nodes, relationships(path) as path_rels
         LIMIT {max_nodes}
         UNWIND path_nodes as n
