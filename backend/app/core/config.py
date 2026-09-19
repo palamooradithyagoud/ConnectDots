@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Database
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/crime_db"
+    DATABASE_URL: str = "postgresql://postgres:CHANGE_ME@localhost:5432/crime_db"
     
     # CORS
     BACKEND_CORS_ORIGINS: Union[List[str], str] = [
@@ -58,10 +58,11 @@ class Settings(BaseSettings):
     ML_ROLLING_WINDOW_WEEKS: int = 4        # Rolling average window in periods
 
     # Phase 4: Knowledge Graph (Neo4j Aura) & LLM Investigation Intelligence
-    NEO4J_URI: str = "neo4j+s://REDACTED.databases.neo4j.io"
+    # Set these in your .env file — do NOT hardcode real credentials here.
+    NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
     NEO4J_USERNAME: Union[str, None] = None
-    NEO4J_PASSWORD: str = "REDACTED_PASSWORD"
+    NEO4J_PASSWORD: str = "CHANGE_ME"
     NEO4J_DATABASE: str = "neo4j"
     AURA_INSTANCEID: Union[str, None] = None
     AURA_INSTANCENAME: Union[str, None] = None
