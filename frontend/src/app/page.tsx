@@ -53,76 +53,11 @@ export default function LandingPage() {
           {/* Glowing Ambient Orb */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-gradient-to-r from-[#df0095]/15 via-purple-600/15 to-violet-600/10 rounded-full blur-[160px] pointer-events-none -z-10" />
 
-          {/* Two-column hero layout */}
+          {/* Two-column hero layout: Text on Left, Connect Dots Card on Right */}
           <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
 
-            {/* LEFT: ParticleText Canvas — CONNECTDOTS */}
-            <div className="w-full lg:w-[46%] shrink-0">
-              {/* Vertical label above */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[0.6rem] font-mono font-bold uppercase tracking-[0.25em] text-[#df0095]/80">Interactive · Hover to replay</span>
-                <div className="flex-1 h-px bg-[#df0095]/20" />
-              </div>
-
-              {/* Particle canvas wrapper */}
-              <div
-                className="w-full rounded-3xl overflow-hidden border border-[#df0095]/15 shadow-[0_0_60px_rgba(223,0,149,0.18)]"
-                style={{ height: 340, background: "#09090f" }}
-              >
-                <ParticleText
-                  text="CONNECT"
-                  particleSize={2.2}
-                  density={3}
-                  color="#ffffff"
-                  highlightColor="#df0095"
-                  scatter={200}
-                  gatherDuration={1800}
-                  stagger={500}
-                  pointerRepel={50}
-                  repelRadius={130}
-                  idleDrift={0.8}
-                  trigger="hover"
-                  fontSize="clamp(3.5rem, 10vw, 5.5rem)"
-                  fontWeight={900}
-                  fontFamily="inherit"
-                  glow
-                />
-              </div>
-
-              {/* Second line */}
-              <div
-                className="w-full rounded-3xl overflow-hidden mt-3 border border-violet-500/15 shadow-[0_0_60px_rgba(139,92,246,0.18)]"
-                style={{ height: 200, background: "#09090f" }}
-              >
-                <ParticleText
-                  text="DOTS"
-                  particleSize={2.5}
-                  density={3}
-                  color="#ffffff"
-                  highlightColor="#8b5cf6"
-                  scatter={160}
-                  gatherDuration={1400}
-                  stagger={380}
-                  pointerRepel={45}
-                  repelRadius={120}
-                  idleDrift={0.9}
-                  trigger="hover"
-                  fontSize="clamp(4rem, 12vw, 7rem)"
-                  fontWeight={900}
-                  fontFamily="inherit"
-                  glow
-                />
-              </div>
-
-              {/* Tag below */}
-              <div className="mt-3 flex items-center gap-2">
-                <div className="flex-1 h-px bg-violet-500/20" />
-                <span className="text-[0.6rem] font-mono font-bold uppercase tracking-[0.2em] text-violet-400/60">India&apos;s First AI Crime Intelligence Platform</span>
-              </div>
-            </div>
-
-            {/* RIGHT: Hero copy */}
-            <div className="flex-1 flex flex-col gap-6 text-left">
+            {/* LEFT: Hero Copy & Status Pills */}
+            <div className="w-full lg:w-[52%] flex flex-col gap-6 text-left">
               {/* Eyebrow Pill Badge */}
               <div className="inline-flex items-center gap-2.5 rounded-full border border-violet-500/30 bg-[#12121c] px-4 py-1.5 text-xs font-mono font-bold tracking-wider text-violet-300 shadow-brand-glow w-fit">
                 <span className="relative flex h-2 w-2">
@@ -199,6 +134,100 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+
+            {/* RIGHT: Unified CONNECT DOTS Animation in ONE Card */}
+            <div className="w-full lg:w-[48%] shrink-0">
+              <div className="rounded-3xl border border-[#df0095]/25 bg-gradient-to-b from-[#130f22] via-[#0a0a14] to-[#040409] p-4 sm:p-5 shadow-[0_0_60px_rgba(223,0,149,0.22)] backdrop-blur-2xl relative overflow-hidden space-y-3">
+                {/* Ambient Top Glow */}
+                <div className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 bg-[#df0095]/15 rounded-full blur-3xl" />
+
+                {/* Top Interactive Label Bar */}
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#df0095] opacity-75"></span>
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-[#df0095]"></span>
+                    </span>
+                    <span className="text-[0.62rem] font-mono font-bold uppercase tracking-[0.22em] text-[#df0095]">
+                      Interactive · Hover to Replay
+                    </span>
+                  </div>
+                  <span className="text-[0.58rem] font-mono font-semibold text-violet-400/70 tracking-widest uppercase bg-violet-950/40 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                    384-Dim Vector Core
+                  </span>
+                </div>
+
+                {/* Unified Particle Canvas Viewport */}
+                <div className="w-full rounded-2xl overflow-hidden bg-[#07070e]/95 border border-white/[0.06] p-2 space-y-1 shadow-inner relative">
+                  {/* Line 1: CONNECT */}
+                  <div
+                    className="w-full overflow-hidden"
+                    style={{ height: 185 }}
+                  >
+                    <ParticleText
+                      text="CONNECT"
+                      particleSize={2.2}
+                      density={3}
+                      color="#ffffff"
+                      highlightColor="#df0095"
+                      scatter={180}
+                      gatherDuration={1600}
+                      stagger={450}
+                      pointerRepel={45}
+                      repelRadius={120}
+                      idleDrift={0.8}
+                      trigger="hover"
+                      fontSize="clamp(3.2rem, 7.5vw, 4.8rem)"
+                      fontWeight={900}
+                      fontFamily="inherit"
+                      glow
+                    />
+                  </div>
+
+                  {/* Soft Neon Divider */}
+                  <div className="relative flex items-center justify-center my-0.5">
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-[#df0095]/30 to-transparent" />
+                  </div>
+
+                  {/* Line 2: DOTS */}
+                  <div
+                    className="w-full overflow-hidden"
+                    style={{ height: 160 }}
+                  >
+                    <ParticleText
+                      text="DOTS"
+                      particleSize={2.4}
+                      density={3}
+                      color="#ffffff"
+                      highlightColor="#8b5cf6"
+                      scatter={150}
+                      gatherDuration={1400}
+                      stagger={380}
+                      pointerRepel={45}
+                      repelRadius={120}
+                      idleDrift={0.9}
+                      trigger="hover"
+                      fontSize="clamp(3.8rem, 8.5vw, 5.6rem)"
+                      fontWeight={900}
+                      fontFamily="inherit"
+                      glow
+                    />
+                  </div>
+                </div>
+
+                {/* Card Bottom Meta Bar */}
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-[0.6rem] font-mono px-1">
+                  <div className="flex items-center gap-2 text-violet-300/80">
+                    <div className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+                    <span className="uppercase tracking-wider font-semibold">India&apos;s First AI Crime Platform</span>
+                  </div>
+                  <span className="text-emerald-400/90 font-bold tracking-wider">
+                    PostGIS · Qdrant · Neo4j
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </section>
 
