@@ -321,16 +321,33 @@ export default function Navbar() {
     { feature: "Support", free: "Community", monthly: "Priority", yearly: "Priority" },
   ];
 
+  // 120fps physics-interpolated smooth anchor scroller
+  const scrollToTarget = (href: string, e?: React.MouseEvent) => {
+    if (!href.startsWith("#")) return;
+    const targetId = href.replace("#", "");
+    const elem = document.getElementById(targetId);
+    if (elem) {
+      if (e) e.preventDefault();
+      setOpenDropdown(null);
+      setMobileMenuOpen(false);
+      if (typeof window !== "undefined" && (window as any).__lenis) {
+        (window as any).__lenis.scrollTo(elem, { offset: -90, duration: 1.1 });
+      } else {
+        elem.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
   // ==========================================
   // 1. LANDING PAGE NAVBAR (EXACT TECHSNAP REPLICA)
   // ==========================================
   if (isLandingPage) {
     return (
       <nav
-        className={`fixed z-[100] left-1/2 -translate-x-1/2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[top,width,background-color,box-shadow,border-radius] ${
+        className={`fixed top-0 z-[100] left-1/2 -translate-x-1/2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[transform,width,background-color,box-shadow,border-radius] ${
           scrolled
-            ? "top-3 sm:top-4 w-[94%] max-w-[1320px] rounded-full border border-purple-500/30 bg-[#080714]/92 backdrop-blur-2xl shadow-[0_16px_45px_rgba(0,0,0,0.85),0_0_30px_rgba(223,0,149,0.18)] px-4 sm:px-6 py-2"
-            : "top-0 w-full max-w-[1600px] rounded-none border border-transparent bg-transparent shadow-none px-6 pt-3.5 pb-2"
+            ? "translate-y-2.5 sm:translate-y-3.5 w-[94%] max-w-[1320px] rounded-full border border-purple-500/30 bg-[#080714]/92 backdrop-blur-2xl shadow-[0_16px_45px_rgba(0,0,0,0.85),0_0_30px_rgba(223,0,149,0.18)] px-4 sm:px-6 py-2"
+            : "translate-y-0 w-full max-w-[1600px] rounded-none border border-transparent bg-transparent shadow-none px-6 pt-3.5 pb-2"
         }`}
       >
         <div className="relative mx-auto w-full">
@@ -386,14 +403,7 @@ export default function Navbar() {
                   >
                     <a
                       href={dropdown.href}
-                      onClick={(e) => {
-                        const targetId = dropdown.href.replace("#", "");
-                        const elem = document.getElementById(targetId);
-                        if (elem) {
-                          e.preventDefault();
-                          elem.scrollIntoView({ behavior: "smooth" });
-                        }
-                      }}
+                      onClick={(e) => scrollToTarget(dropdown.href, e)}
                       className={`group/btn w-full justify-center flex items-center text-xs px-3 py-2 rounded-full font-semibold transition-all duration-300 whitespace-nowrap cursor-pointer select-none ${
                         isOpen
                           ? "bg-[#df0095] text-white shadow-[0_0_12px_rgba(223,0,149,0.5)]"
@@ -572,17 +582,7 @@ export default function Navbar() {
                               <Link
                                 key={idx}
                                 href={subItem.href}
-                                onClick={(e) => {
-                                  if (subItem.href.startsWith("#")) {
-                                    const targetId = subItem.href.replace("#", "");
-                                    const elem = document.getElementById(targetId);
-                                    if (elem) {
-                                      e.preventDefault();
-                                      elem.scrollIntoView({ behavior: "smooth" });
-                                      setOpenDropdown(null);
-                                    }
-                                  }
-                                }}
+                                onClick={(e) => scrollToTarget(subItem.href, e)}
                                 className="group/item flex items-start gap-3 rounded-xl p-2.5 hover:bg-slate-50 transition-colors"
                               >
                                 <div className="p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 group-hover/item:bg-[#df0095]/10 group-hover/item:text-[#df0095] group-hover/item:border-[#df0095]/30 transition-colors shrink-0 mt-0.5">
@@ -678,7 +678,7 @@ export default function Navbar() {
                         <Link
                           key={idx}
                           href={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
+                          onClick={(e) => scrollToTarget(item.href, e)}
                           className="flex items-center justify-between p-2 rounded-lg text-xs font-semibold text-slate-800 hover:bg-slate-50 hover:text-[#df0095] transition-colors"
                         >
                           <span>{item.title}</span>

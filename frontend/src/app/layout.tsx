@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import AppContainer from "@/components/AppContainer";
+import SmoothScroll from "@/components/SmoothScroll";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,8 +25,10 @@ export default function RootLayout({
         className="min-h-screen bg-[#030307] text-foreground antialiased selection:bg-brand selection:text-white"
         suppressHydrationWarning
       >
-        <Navbar />
-        <AppContainer>{children}</AppContainer>
+        <SmoothScroll>
+          <Navbar />
+          <AppContainer>{children}</AppContainer>
+        </SmoothScroll>
       </body>
     </html>
   );
