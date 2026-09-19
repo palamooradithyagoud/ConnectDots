@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Shield, UploadCloud, Database, MapPin, BarChart3, Activity, Sparkles, TrendingUp, Brain } from "lucide-react";
+import { Shield, UploadCloud, Database, MapPin, BarChart3, Activity, Sparkles, TrendingUp, Brain, PhoneCall } from "lucide-react";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export default function Navbar() {
   const navItems = [
     { label: "Overview", href: "/", icon: BarChart3 },
     { label: "Investigation", href: "/investigation", icon: Brain },
+    { label: "Telecom / CDR", href: "/telecom", icon: PhoneCall },
     { label: "Analytics", href: "/analytics", icon: TrendingUp },
     { label: "Crime Explorer", href: "/crimes", icon: Database },
     { label: "Semantic Search", href: "/search", icon: Sparkles },

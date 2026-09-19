@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.models.crime import Crime
 from app.models.nlp_analysis import NlpAnalysis
 from app.models.ml_models import CrimeCluster, CrimeClusterMember, CrimePattern
+from app.models.telecom import PhoneNumber, CdrRecord, CrimePhoneAssociation, PersonPhoneAssociation
 from app.services.neo4j_service import Neo4jService
 from app.services.graph_ready_service import GraphReadyService
 from app.services.embedding_service import EmbeddingService
@@ -242,6 +243,8 @@ class GraphSyncService:
                 rel_type = "SHARES_MO"
             elif e_type == "Location":
                 rel_type = "SAME_LOCATION"
+            elif e_type == "Phone":
+                rel_type = "SHARES_PHONE"
 
             if not rel_type:
                 continue
@@ -348,11 +351,161 @@ class GraphSyncService:
         except Exception as e:
             logger.warning(f"Semantic similarity graph link skipped: {e}")
 
+        # 6. Synchronize Telecom & CDR Intelligence
+        phones_synced = 0
+        call_rels_synced = 0
+
+        # A. Sync Phone nodes
+        db_phones = db.query(PhoneNumber).all()
+        phone_id_to_norm: Dict[str, str] = {}
+        for p in db_phones:
+            phone_node_id = f"phone:{p.normalized_number}"
+            phone_id_to_norm[p.id] = p.normalized_number
+            Neo4jService.upsert_entity(
+                label="Phone",
+                entity_id=phone_node_id,
+                properties={
+                    "id": p.id,
+                    "number": p.normalized_number,
+                    "country_code": p.country_code or "",
+                    "national_number": p.national_number or "",
+                    "number_type": p.number_type or "UNKNOWN",
+                }
+            )
+            entities_synced += 1
+            phones_synced += 1
+
+        # B. Sync Crime-Phone associations
+        crime_phone_assocs = db.query(CrimePhoneAssociation).all()
+        crime_to_phones: Dict[str, Set[str]] = defaultdict(set)
+        phone_to_crimes: Dict[str, Set[str]] = defaultdict(set)
+
+        for cpa in crime_phone_assocs:
+            norm_num = phone_id_to_norm.get(cpa.phone_id)
+            if not norm_num:
+                continue
+            phone_node_id = f"phone:{norm_num}"
+            crime_node_id = f"crime:{cpa.crime_id}"
+
+            Neo4jService.create_relationship(
+                source_id=crime_node_id,
+                rel_type="MENTIONS_PHONE",
+                target_id=phone_node_id,
+                properties={
+                    "relationship_type": cpa.relationship_type,
+                    "confidence": float(cpa.confidence),
+                    "source_text": cpa.source_text or ""
+                },
+                confidence_type=cpa.confidence_type or "explicit"
+            )
+            explicit_rels += 1
+            crime_to_phones[cpa.crime_id].add(norm_num)
+            phone_to_crimes[norm_num].add(cpa.crime_id)
+
+        # C. Sync Person-Phone associations
+        person_phone_assocs = db.query(PersonPhoneAssociation).all()
+        for ppa in person_phone_assocs:
+            norm_num = phone_id_to_norm.get(ppa.phone_id)
+            if not norm_num:
+                continue
+            phone_node_id = f"phone:{norm_num}"
+            person_node_id = f"person:{ppa.person_name.strip().replace(' ', '_').lower()}"
+            Neo4jService.upsert_entity(
+                label="Person",
+                entity_id=person_node_id,
+                properties={"description": ppa.person_name.strip()}
+            )
+            Neo4jService.create_relationship(
+                source_id=person_node_id,
+                rel_type="USES_PHONE",
+                target_id=phone_node_id,
+                properties={
+                    "role": ppa.role,
+                    "confidence": float(ppa.confidence),
+                    "source": ppa.source or "investigative_record"
+                },
+                confidence_type=ppa.confidence_type or "derived"
+            )
+            explicit_rels += 1
+
+        # D. Aggregate and sync CDR CALLS relationships between Phones
+        cdr_records = db.query(CdrRecord).all()
+        call_aggregates: Dict[Tuple[str, str], Dict[str, Any]] = defaultdict(lambda: {
+            "call_count": 0,
+            "total_duration": 0,
+            "first_seen": None,
+            "last_seen": None
+        })
+
+        for cdr in cdr_records:
+            caller_norm = phone_id_to_norm.get(cdr.caller_phone_id)
+            callee_norm = phone_id_to_norm.get(cdr.callee_phone_id)
+            if not caller_norm or not callee_norm:
+                continue
+
+            pair = (caller_norm, callee_norm)
+            agg = call_aggregates[pair]
+            agg["call_count"] += 1
+            agg["total_duration"] += cdr.duration_seconds
+            t_iso = cdr.call_timestamp.isoformat() if cdr.call_timestamp else ""
+            if not agg["first_seen"] or (t_iso and t_iso < agg["first_seen"]):
+                agg["first_seen"] = t_iso
+            if not agg["last_seen"] or (t_iso and t_iso > agg["last_seen"]):
+                agg["last_seen"] = t_iso
+
+        for (caller_num, callee_num), agg in call_aggregates.items():
+            caller_node_id = f"phone:{caller_num}"
+            callee_node_id = f"phone:{callee_num}"
+            Neo4jService.create_relationship(
+                source_id=caller_node_id,
+                rel_type="CALLS",
+                target_id=callee_node_id,
+                properties={
+                    "call_count": agg["call_count"],
+                    "total_duration": agg["total_duration"],
+                    "first_seen": agg["first_seen"],
+                    "last_seen": agg["last_seen"],
+                },
+                confidence_type="explicit"
+            )
+            explicit_rels += 1
+            call_rels_synced += 1
+
+        # E. Cross-Case Telecommunication Linkages (COMMUNICATION_LINKED)
+        for (caller_num, callee_num), agg in call_aggregates.items():
+            crimes_caller = phone_to_crimes.get(caller_num, set())
+            crimes_callee = phone_to_crimes.get(callee_num, set())
+
+            for c_src in crimes_caller:
+                for c_dst in crimes_callee:
+                    if c_src != c_dst:
+                        pair_key = (c_src, c_dst, "COMMUNICATION_LINKED")
+                        if pair_key in derived_pairs_seen:
+                            continue
+                        derived_pairs_seen.add(pair_key)
+
+                        link_props = {
+                            "source": "cdr_communication",
+                            "caller_phone": caller_num,
+                            "callee_phone": callee_num,
+                            "call_count": agg["call_count"],
+                            "total_duration": agg["total_duration"],
+                            "confidence": 0.88
+                        }
+                        Neo4jService.create_relationship(
+                            source_id=f"crime:{c_src}",
+                            rel_type="COMMUNICATION_LINKED",
+                            target_id=f"crime:{c_dst}",
+                            properties=link_props,
+                            confidence_type="derived"
+                        )
+                        derived_rels += 1
+
         stats = Neo4jService.get_stats()
         logger.info(
             f"Graph synchronization complete: {crimes_synced} crimes, "
             f"{entities_synced} entities, {explicit_rels} explicit edges, "
-            f"{derived_rels} derived edges."
+            f"{derived_rels} derived edges, {phones_synced} phones, {call_rels_synced} call edges."
         )
 
         return {
@@ -361,5 +514,7 @@ class GraphSyncService:
             "entities_synced": entities_synced,
             "explicit_relationships_created": explicit_rels,
             "derived_relationships_created": derived_rels,
+            "phones_synced": phones_synced,
+            "call_relationships_synced": call_rels_synced,
             "graph_stats": stats
         }

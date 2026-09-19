@@ -77,9 +77,11 @@ class Settings(BaseSettings):
             self.NEO4J_USER = self.NEO4J_USERNAME
 
     # LLM Provider Abstraction
-    LLM_PROVIDER: str = "openai"            # "openai" | "mock"
-    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_PROVIDER: str = "groq"              # "groq" | "openai" | "mock"
+    LLM_MODEL: str = "openai/gpt-oss-120b"
     LLM_API_KEY: Union[str, None] = None
+    GROQ_API_KEY: Union[str, None] = None
+    LLM_BASE_URL: Union[str, None] = None
     LLM_TEMPERATURE: float = 0.1
     LLM_MAX_TOKENS: int = 1500
 

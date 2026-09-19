@@ -70,11 +70,20 @@ class EntityExtractionService:
         re.compile(r"\b(?:near|at|around|outside|inside|in\s+front\s+of|behind|opposite)\s+([A-Z][a-zA-Z0-9\s]+?(?=(?:at|on|using|and|with|escaped|in|\.|$)))", re.IGNORECASE),
     ]
 
+    PHONE_PATTERNS = [
+        # Explicit telephone prefix indicators (e.g. "phone: 9876543210", "mobile: +91 9876543210")
+        re.compile(r"\b(?:ph(?:one)?|mobile|cell|contact|no\.?|dialed|called)\s*[:\-]?\s*(\+?[\d\s\-]{8,16}\d)\b", re.IGNORECASE),
+        # Indian standard mobile numbers (10 digits starting with 6-9, with optional +91 or 0 prefix)
+        re.compile(r"(?:\b|\+)(?:(?:91|0)[\s\-]?)?[6-9]\d{9}\b"),
+        # General international E.164-style numbers
+        re.compile(r"\+\d{1,3}[\s\-]?(?:\(?\d{1,4}\)?[\s\-]?)?\d{3,4}[\s\-]?\d{3,4}\b"),
+    ]
+
     @classmethod
     def extract_entities(cls, text: str, fallback_location: Optional[str] = None) -> Dict[str, Any]:
         """
         Extracts all supported entity categories from description text.
-        Guarantees: Non-hallucination. Only items appearing in text are returned.
+        Guarantees: Non-hallucination. Only entities directly grounded in source text are returned.
         """
         if not text or not text.strip():
             return {
@@ -86,6 +95,7 @@ class EntityExtractionService:
                 "dates": [],
                 "times": [],
                 "money": [],
+                "phones": [],
             }
 
         extracted: Dict[str, List[str]] = {
@@ -97,6 +107,7 @@ class EntityExtractionService:
             "dates": [],
             "times": [],
             "money": [],
+            "phones": [],
         }
 
         # 1. spaCy NER Pass if available
@@ -130,6 +141,7 @@ class EntityExtractionService:
         cls._match_patterns(cls.TIME_PATTERNS, text, extracted["times"])
         cls._match_patterns(cls.DATE_PATTERNS, text, extracted["dates"])
         cls._match_patterns(cls.MONEY_PATTERNS, text, extracted["money"])
+        cls._extract_phones(text, extracted["phones"])
 
         # 3. Prepositional Location phrases
         for pattern in cls.LOCATION_PHRASE_PATTERNS:
@@ -148,6 +160,37 @@ class EntityExtractionService:
             extracted[category] = cls._deduplicate_substrings(extracted[category])
 
         return extracted
+
+    @classmethod
+    def _extract_phones(cls, text: str, target_list: List[str]):
+        """
+        Extracts candidate phone strings, normalizes them via PhoneNormalizationService,
+        and excludes false positives from dates, FIRs, PIN codes, and vehicle registration numbers.
+        """
+        from app.services.phone_normalization_service import PhoneNormalizationService
+
+        found_candidates = set()
+        for pattern in cls.PHONE_PATTERNS:
+            for match in pattern.finditer(text):
+                val = match.group(1) if match.lastindex and match.lastindex >= 1 else match.group(0)
+                cleaned_val = val.strip(" ,.-:;()[]{}")
+                if cleaned_val:
+                    found_candidates.add(cleaned_val)
+
+        for cand in sorted(found_candidates, key=len, reverse=True):
+            # Check false-positive avoidance:
+            # Check if this candidate is actually a date format like 2026-09-19 or 19/09/2026
+            if re.match(r"^\d{4}[-/]\d{2}[-/]\d{2}$", cand) or re.match(r"^\d{2}[-/]\d{2}[-/]\d{4}$", cand):
+                continue
+            # Check if candidate is part of a vehicle registration plate like TS09AB1234
+            if re.search(r"[A-Za-z]{2}\s*\d{1,2}\s*[A-Za-z]{1,3}\s*" + re.escape(cand), text, re.IGNORECASE):
+                continue
+
+            norm_res = PhoneNormalizationService.normalize(cand)
+            if norm_res.is_valid and norm_res.normalized_number:
+                canonical = norm_res.normalized_number
+                if canonical not in target_list:
+                    target_list.append(canonical)
 
     @classmethod
     def _match_patterns(cls, patterns: List[re.Pattern], text: str, target_list: List[str]):

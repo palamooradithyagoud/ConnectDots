@@ -43,6 +43,7 @@ out/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.tsbuildinfo
 
 # Vector Database Local Storage & Temp files
 qdrant_storage/

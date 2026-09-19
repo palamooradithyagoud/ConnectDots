@@ -11,11 +11,12 @@ import {
   Car,
   Crosshair,
   Zap,
-  TrendingUp,
   User,
   ShieldAlert,
   Building,
-  Maximize2
+  Maximize2,
+  PhoneCall,
+  TrendingUp
 } from "lucide-react";
 
 interface InteractiveGraphProps {
@@ -144,6 +145,8 @@ export default function InteractiveGraph({
         return { bg: "#c026d3", border: "#e879f9", text: "#fae8ff", ring: "rgba(192, 38, 211, 0.4)" };
       case "Organization":
         return { bg: "#4f46e5", border: "#818cf8", text: "#e0e7ff", ring: "rgba(79, 70, 229, 0.4)" };
+      case "Phone":
+        return { bg: "#0d9488", border: "#2dd4bf", text: "#ccfbf1", ring: "rgba(13, 148, 136, 0.4)" };
       default:
         return { bg: "#475569", border: "#94a3b8", text: "#f1f5f9", ring: "rgba(71, 85, 105, 0.4)" };
     }
@@ -169,6 +172,8 @@ export default function InteractiveGraph({
         return <User className="h-3.5 w-3.5" />;
       case "Organization":
         return <Building className="h-3.5 w-3.5" />;
+      case "Phone":
+        return <PhoneCall className="h-3.5 w-3.5" />;
       default:
         return <ShieldAlert className="h-3.5 w-3.5" />;
     }
@@ -177,6 +182,7 @@ export default function InteractiveGraph({
   const getNodeLabelText = (node: GraphNode) => {
     const p = node.properties || {};
     if (node.label === "Crime") return p.record_id || p.category || node.id;
+    if (node.label === "Phone") return p.number || node.id.replace("phone:", "");
     return p.name || p.pattern || p.description || node.id.split(":").pop() || node.id;
   };
 

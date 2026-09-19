@@ -116,6 +116,8 @@ class Neo4jService:
             "CREATE CONSTRAINT mo_id_unique IF NOT EXISTS FOR (m:ModusOperandi) REQUIRE m.id IS UNIQUE",
             "CREATE CONSTRAINT cluster_id_unique IF NOT EXISTS FOR (cl:CrimeCluster) REQUIRE cl.id IS UNIQUE",
             "CREATE CONSTRAINT pattern_id_unique IF NOT EXISTS FOR (pat:Pattern) REQUIRE pat.id IS UNIQUE",
+            "CREATE CONSTRAINT phone_id_unique IF NOT EXISTS FOR (p:Phone) REQUIRE p.id IS UNIQUE",
+            "CREATE CONSTRAINT phone_number_unique IF NOT EXISTS FOR (p:Phone) REQUIRE p.number IS UNIQUE",
         ]
 
         driver = cls.get_driver()
@@ -188,7 +190,7 @@ class Neo4jService:
         """
         clean_label = label.strip()
         # Whitelist safe node labels
-        allowed_labels = {"Location", "Person", "Organization", "Vehicle", "Weapon", "ModusOperandi", "CrimeCluster", "Pattern"}
+        allowed_labels = {"Location", "Person", "Organization", "Vehicle", "Weapon", "ModusOperandi", "CrimeCluster", "Pattern", "Phone"}
         if clean_label not in allowed_labels:
             logger.warning(f"Rejected unsafe node label: {clean_label}")
             return False
@@ -235,7 +237,8 @@ class Neo4jService:
             "USED_VEHICLE", "USED_WEAPON", "EXHIBITS_MO",
             "BELONGS_TO", "SUPPORTS",
             "SEMANTICALLY_SIMILAR", "SHARES_VEHICLE", "SHARES_WEAPON",
-            "SHARES_MO", "SAME_LOCATION", "SAME_CLUSTER"
+            "SHARES_MO", "SAME_LOCATION", "SAME_CLUSTER",
+            "MENTIONS_PHONE", "USES_PHONE", "CALLS", "SHARES_PHONE", "COMMUNICATION_LINKED"
         }
         if rel_type not in allowed_rels:
             logger.warning(f"Rejected unsafe relationship type: {rel_type}")

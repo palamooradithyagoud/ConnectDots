@@ -21,3 +21,5 @@ spacy>=3.7.0
 scikit-learn>=1.4.0
 neo4j>=5.18.0
 openai>=1.14.0
+phonenumbers>=9.0.0
+

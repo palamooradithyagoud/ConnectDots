@@ -126,6 +126,21 @@ class GraphReadyService:
                 "target": p_id
             })
 
+        # 7. Phone Numbers
+        for ph in entities.get("phones", []):
+            clean_ph = ph.strip()
+            ph_id = f"phone:{clean_ph}"
+            nodes.append({
+                "id": ph_id,
+                "label": "Phone",
+                "properties": {"number": clean_ph}
+            })
+            relationships.append({
+                "source": crime_node_id,
+                "relation": "MENTIONS_PHONE",
+                "target": ph_id
+            })
+
         # Deduplicate nodes by id
         unique_nodes = {n["id"]: n for n in nodes}
 

@@ -10,6 +10,12 @@ from app.models.ml_models import (
     CrimePattern,
     CrimeTrend,
 )
+from app.models.telecom import (
+    PhoneNumber,
+    CdrRecord,
+    CrimePhoneAssociation,
+    PersonPhoneAssociation,
+)
 
 __all__ = [
     "Base",
@@ -17,4 +23,6 @@ __all__ = [
     "NlpAnalysis",
     "MlAnalysisJob", "CrimeCluster", "CrimeClusterMember",
     "CrimeHotspot", "CrimeAnomaly", "CrimePattern", "CrimeTrend",
+    "PhoneNumber", "CdrRecord", "CrimePhoneAssociation", "PersonPhoneAssociation",
 ]
+

@@ -334,6 +334,135 @@ class GraphQueryService:
             return []
 
     @classmethod
+    def get_phone_neighborhood(
+        cls,
+        phone_number: str,
+        depth: int = 2,
+        max_nodes: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Retrieves the connected neighborhood for a given phone number up to specified depth.
+        Includes connected Phones (via CALLS), Crimes (via MENTIONS_PHONE), and Persons (via USES_PHONE).
+        """
+        clean_num = phone_number.strip()
+        phone_node_id = f"phone:{clean_num}" if not clean_num.startswith("phone:") else clean_num
+        depth = min(max(1, depth), settings.GRAPH_TRAVERSAL_MAX_DEPTH)
+
+        if Neo4jService.is_fallback_mode():
+            visited_nodes: Dict[str, Dict[str, Any]] = {}
+            visited_edges: List[Dict[str, Any]] = []
+            queue = [(phone_node_id, 0)]
+            seen = {phone_node_id}
+
+            if phone_node_id in Neo4jService._mock_nodes:
+                visited_nodes[phone_node_id] = Neo4jService._mock_nodes[phone_node_id]
+
+            while queue and len(visited_nodes) < max_nodes:
+                curr_id, d = queue.pop(0)
+                if d >= depth:
+                    continue
+
+                for rel in Neo4jService._mock_relationships:
+                    src = rel["source"]
+                    tgt = rel["target"]
+                    if src == curr_id or tgt == curr_id:
+                        other = tgt if src == curr_id else src
+                        visited_edges.append(rel)
+
+                        if other not in seen and len(visited_nodes) < max_nodes:
+                            seen.add(other)
+                            if other in Neo4jService._mock_nodes:
+                                visited_nodes[other] = Neo4jService._mock_nodes[other]
+                            queue.append((other, d + 1))
+
+            return {
+                "center_node_id": phone_node_id,
+                "nodes": list(visited_nodes.values()),
+                "edges": visited_edges,
+                "total_nodes": len(visited_nodes),
+                "total_edges": len(visited_edges)
+            }
+
+        driver = Neo4jService.get_driver()
+        num_clean = clean_num.replace("phone:", "")
+        prefixed_id = f"phone:{num_clean}"
+
+        query = f"""
+        MATCH path = (start:Phone)-[r*1..{depth}]-(neighbor)
+        WHERE start.number = $num_clean OR start.id = $prefixed_id OR start.id = $num_clean
+        WITH start, r, neighbor, nodes(path) as path_nodes, relationships(path) as path_rels
+        LIMIT {max_nodes}
+        UNWIND path_nodes as n
+        UNWIND path_rels as rel
+        RETURN collect(DISTINCT {{
+            id: n.id,
+            label: labels(n)[0],
+            properties: properties(n)
+        }}) as nodes,
+        collect(DISTINCT {{
+            source: startNode(rel).id,
+            target: endNode(rel).id,
+            relation: type(rel),
+            properties: properties(rel)
+        }}) as edges
+        """
+        try:
+            with driver.session(database=settings.NEO4J_DATABASE) as session:
+                res = session.run(query, {"num_clean": num_clean, "prefixed_id": prefixed_id}).single()
+                if res and res["nodes"]:
+                    return {
+                        "center_node_id": phone_node_id,
+                        "nodes": res["nodes"],
+                        "edges": res["edges"],
+                        "total_nodes": len(res["nodes"]),
+                        "total_edges": len(res["edges"])
+                    }
+        except Exception as e:
+            logger.error(f"Error executing get_phone_neighborhood: {e}")
+
+        return {
+            "center_node_id": phone_node_id,
+            "nodes": [],
+            "edges": [],
+            "total_nodes": 0,
+            "total_edges": 0
+        }
+
+    @classmethod
+    def find_crimes_by_phone(cls, phone_number: str) -> List[Dict[str, Any]]:
+        """
+        Finds all crime incidents connected to a given phone number.
+        """
+        clean_num = phone_number.strip().replace("phone:", "")
+        phone_node_id = f"phone:{clean_num}"
+
+        if Neo4jService.is_fallback_mode():
+            linked_crimes = []
+            for rel in Neo4jService._mock_relationships:
+                if rel.get("relation") == "MENTIONS_PHONE":
+                    if rel.get("target") == phone_node_id:
+                        c_id = rel.get("source")
+                        c_node = Neo4jService._mock_nodes.get(c_id)
+                        if c_node:
+                            linked_crimes.append(c_node.get("properties", {}))
+            return linked_crimes
+
+        driver = Neo4jService.get_driver()
+        query = """
+        MATCH (c:Crime)-[r:MENTIONS_PHONE]->(p:Phone)
+        WHERE p.number = $num OR p.id = $prefixed_id OR p.id = $num
+        RETURN properties(c) as crime, properties(r) as relationship
+        LIMIT 50
+        """
+        try:
+            with driver.session(database=settings.NEO4J_DATABASE) as session:
+                results = session.run(query, {"num": clean_num, "prefixed_id": phone_node_id}).data()
+                return [r["crime"] for r in results]
+        except Exception as e:
+            logger.error(f"Error finding crimes by phone: {e}")
+            return []
+
+    @classmethod
     def get_stats(cls) -> Dict[str, Any]:
         """Returns knowledge graph statistics."""
         return Neo4jService.get_stats()

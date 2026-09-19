@@ -29,12 +29,13 @@ CRITICAL OPERATIONAL RULES:
 3. If the retrieved evidence is insufficient to address the question, clearly state: "Insufficient evidence available in the current records."
 4. Clearly distinguish:
    a) Directly stated / explicit facts (from source incident reports)
-   b) NLP-extracted entities (locations, weapons, vehicles, M.O.)
+   b) NLP-extracted entities (locations, weapons, vehicles, M.O., mentioned phone numbers)
    c) ML-derived patterns and clusters (statistical groupings)
    d) Graph-derived relationships (shared entity overlaps)
-   e) Analytical uncertainty
+   e) Telecommunications / CDR linkages (caller, callee, call duration, timestamp, frequency)
+   f) Analytical uncertainty
 5. Never treat statistical similarity, shared modus operandi, or geographic proximity as proof of common perpetrator identity, intent, coordination, or legal causation.
-6. Always cite the exact crime IDs (e.g. CR-2026-014) that support each statement.
+6. Always cite the exact crime IDs (e.g. CR-2026-014) and phone numbers that support each statement.
 7. Format your response into four distinct markdown sections:
    ### Summary
    ### Connections
@@ -134,11 +135,79 @@ class GraphRAGService:
                         "matching_crimes": list(overlap)
                     })
 
+        # D. Telecom & CDR Evidence Retrieval
+        telecom_evidence = []
+        telecom_calls = []
+        target_phones = []
+
+        from app.models.telecom import PhoneNumber, CdrRecord, CrimePhoneAssociation
+        from app.services.phone_normalization_service import PhoneNormalizationService
+        from sqlalchemy import or_
+
+        if target_crime:
+            c_assocs = db.query(CrimePhoneAssociation).filter(CrimePhoneAssociation.crime_id == target_crime.id).all()
+            for ca in c_assocs:
+                p = db.query(PhoneNumber).filter(PhoneNumber.id == ca.phone_id).first()
+                if p:
+                    target_phones.append(p.normalized_number)
+                    telecom_evidence.append({
+                        "phone_number": p.normalized_number,
+                        "relationship": ca.relationship_type,
+                        "confidence": ca.confidence,
+                        "source_text": ca.source_text,
+                    })
+
+        # Check for phone numbers mentioned directly in the investigator query
+        potential_query_phones = re.findall(r"(?:\+?\d[\d\s\-]{8,15}\d)", clean_question)
+        for pq in potential_query_phones:
+            q_norm = PhoneNormalizationService.normalize(pq)
+            if q_norm.is_valid and q_norm.normalized_number:
+                norm_str = q_norm.normalized_number
+                if norm_str not in target_phones:
+                    target_phones.append(norm_str)
+                    p_db = db.query(PhoneNumber).filter(PhoneNumber.normalized_number == norm_str).first()
+                    if p_db:
+                        # Find any crimes linked to this phone
+                        linked_cas = db.query(CrimePhoneAssociation).filter(CrimePhoneAssociation.phone_id == p_db.id).all()
+                        linked_cids = [lca.crime_id for lca in linked_cas]
+                        linked_c_objs = db.query(Crime).filter(Crime.id.in_(linked_cids)).all() if linked_cids else []
+                        telecom_evidence.append({
+                            "phone_number": norm_str,
+                            "relationship": "QUERY_TARGET_PHONE",
+                            "confidence": 1.0,
+                            "linked_crimes": [c.record_id for c in linked_c_objs]
+                        })
+
+        # Retrieve CDR communications for discovered target phones
+        if target_phones:
+            db_phones = db.query(PhoneNumber).filter(PhoneNumber.normalized_number.in_(target_phones)).all()
+            t_ids = [p.id for p in db_phones]
+            if t_ids:
+                cdrs = db.query(CdrRecord).filter(
+                    or_(CdrRecord.caller_phone_id.in_(t_ids), CdrRecord.callee_phone_id.in_(t_ids))
+                ).limit(15).all()
+
+                all_cdr_phone_ids = set()
+                for c in cdrs:
+                    all_cdr_phone_ids.add(c.caller_phone_id)
+                    all_cdr_phone_ids.add(c.callee_phone_id)
+
+                p_dict = {p.id: p.normalized_number for p in db.query(PhoneNumber).filter(PhoneNumber.id.in_(all_cdr_phone_ids)).all()}
+                for c in cdrs:
+                    telecom_calls.append({
+                        "caller": p_dict.get(c.caller_phone_id),
+                        "callee": p_dict.get(c.callee_phone_id),
+                        "timestamp": c.call_timestamp.isoformat() if c.call_timestamp else None,
+                        "duration_seconds": c.duration_seconds,
+                        "call_type": c.call_type,
+                        "tower_location": c.location_or_tower
+                    })
+
         # 3. Safeguard: Check if any evidence exists
-        if not target_crime and not similar_crimes_data and not graph_connections:
+        if not target_crime and not similar_crimes_data and not graph_connections and not telecom_evidence:
             return cls._empty_response(
                 "Insufficient evidence available in the current database records. "
-                "No incident matches or statistical clusters were found for this query."
+                "No incident matches, statistical clusters, or telecommunications records were found for this query."
             )
 
         # 4. Evidence Fusion into Structured Object
@@ -155,6 +224,8 @@ class GraphRAGService:
             "similar_crimes": similar_crimes_data,
             "graph_connections": graph_connections,
             "supporting_patterns": supporting_patterns,
+            "telecom_evidence": telecom_evidence,
+            "telecom_calls": telecom_calls,
         }
 
         # 5. Build Grounded Prompt

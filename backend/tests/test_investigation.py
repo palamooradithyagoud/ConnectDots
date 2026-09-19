@@ -70,10 +70,14 @@ def client(test_db):
     app.dependency_overrides.clear()
 
 
+from app.services.llm.groq_provider import GroqProvider
+
+
 def test_llm_provider_abstraction():
     """Tests that MockLLMProvider synthesizes structured sections from evidence."""
-    provider = get_llm_provider()
+    provider = get_llm_provider(force_mock=True)
     assert isinstance(provider, MockLLMProvider)
+
 
     mock_evidence = {
         "primary_crime": {
@@ -112,6 +116,13 @@ def test_llm_provider_abstraction():
     assert "### Uncertainty" in response
     assert "crime-014" in response or "CR-2026-014" in response
     assert "crime-021" in response
+
+
+def test_groq_provider_initialization():
+    """Tests that GroqProvider initializes when configured in settings."""
+    provider = get_llm_provider()
+    assert isinstance(provider, GroqProvider)
+    assert provider.model == "openai/gpt-oss-120b"
 
 
 def test_graph_rag_service_with_evidence(test_db):
