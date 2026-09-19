@@ -48,51 +48,125 @@ function CommandCenterWorkspace() {
   } = useInvestigation();
 
   const [lowerTab, setLowerTab] = useState<"timeline_map" | "evidence" | "reviews" | "network">("timeline_map");
+  const [workspaceMode, setWorkspaceMode] = useState<"tri_pane" | "agent_focus" | "graph_focus">("tri_pane");
 
   return (
-    <div className="flex flex-col gap-5 pb-16 font-mono">
+    <div className="flex flex-col gap-4 pb-16 font-mono">
       {/* Top Persistent Operational Header */}
       <InvestigationHeader />
 
-      {/* Main Upper Deck: Tri-Pane Operational Command Center */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left Column (3 cols): Persistent Case Context Dossier */}
-        <div className="lg:col-span-3 flex flex-col">
+      {/* Workspace Perspective Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-black/50 border border-white/[0.08] text-xs">
+          <button
+            onClick={() => setWorkspaceMode("tri_pane")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              workspaceMode === "tri_pane"
+                ? "bg-purple-600 text-white shadow-md font-bold"
+                : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5" />
+            <span>Command Deck</span>
+          </button>
+          <button
+            onClick={() => setWorkspaceMode("agent_focus")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              workspaceMode === "agent_focus"
+                ? "bg-purple-600 text-white shadow-md font-bold"
+                : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+            }`}
+          >
+            <Bot className="h-3.5 w-3.5" />
+            <span>AI Detective Focus</span>
+          </button>
+          <button
+            onClick={() => setWorkspaceMode("graph_focus")}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              workspaceMode === "graph_focus"
+                ? "bg-purple-600 text-white shadow-md font-bold"
+                : "text-white/60 hover:text-white hover:bg-white/[0.04]"
+            }`}
+          >
+            <Compass className="h-3.5 w-3.5" />
+            <span>Graph Focus</span>
+          </button>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-2 text-[0.68rem] text-white/40 font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Case {selectedCaseId} Synchronized</span>
+        </div>
+      </div>
+
+      {/* Main Upper Deck: Operational Command Center with Balanced Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* Left Column: Persistent Case Context Dossier */}
+        <div
+          className={`min-w-0 flex flex-col ${
+            workspaceMode === "agent_focus"
+              ? "lg:col-span-4"
+              : workspaceMode === "graph_focus"
+              ? "lg:col-span-3"
+              : "lg:col-span-3"
+          }`}
+        >
           <CaseContextPanel />
         </div>
 
-        {/* Center Column (6 cols): Investigation Graph Canvas */}
-        <div className="lg:col-span-6 flex flex-col">
-          <div className="relative rounded-2xl border border-white/10 bg-midnight/80 p-2.5 backdrop-blur-xl shadow-2xl flex-1 min-h-[560px]">
-            {loadingGraph ? (
-              <div className="flex h-[540px] w-full flex-col items-center justify-center text-center text-white/50">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent mb-2" />
-                <p className="text-xs">Traversing Knowledge Graph Neighborhood...</p>
-              </div>
-            ) : (
-              <InteractiveGraph
-                nodes={graphNodes}
-                edges={graphEdges}
-                selectedNodeId={selectedNodeId}
-                selectedEdge={selectedEdge}
-                onSelectNode={selectNode}
-                onSelectEdge={selectEdge}
-                highlightedNodeIds={highlightedNodeIds}
-                highlightedEdgeIds={highlightedEdgeIds}
-                onLaunchInvestigation={(id, label) => {
-                  runAgentInvestigation(`Investigate ${label} ${id} and retrieve connected criminal evidence.`);
-                }}
-              />
-            )}
+        {/* Center Column: Investigation Graph Canvas */}
+        {workspaceMode !== "agent_focus" && (
+          <div
+            className={`min-w-0 flex flex-col ${
+              workspaceMode === "graph_focus"
+                ? "lg:col-span-9"
+                : "lg:col-span-5"
+            }`}
+          >
+            <div className="relative rounded-2xl border border-white/10 bg-midnight/80 p-2.5 backdrop-blur-xl shadow-2xl flex-1 min-h-[600px]">
+              {loadingGraph ? (
+                <div className="flex h-[560px] w-full flex-col items-center justify-center text-center text-white/50">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent mb-2" />
+                  <p className="text-xs">Traversing Knowledge Graph Neighborhood...</p>
+                </div>
+              ) : (
+                <InteractiveGraph
+                  nodes={graphNodes}
+                  edges={graphEdges}
+                  selectedNodeId={selectedNodeId}
+                  selectedEdge={selectedEdge}
+                  onSelectNode={selectNode}
+                  onSelectEdge={selectEdge}
+                  highlightedNodeIds={highlightedNodeIds}
+                  highlightedEdgeIds={highlightedEdgeIds}
+                  onLaunchInvestigation={(id, label) => {
+                    runAgentInvestigation(`Investigate ${label} ${id} and retrieve connected criminal evidence.`);
+                  }}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Right Column (3 cols): AI Investigation Agent Console */}
-        <div className="lg:col-span-3 flex flex-col">
-          <div className="rounded-2xl border border-white/10 bg-midnight/80 p-3.5 backdrop-blur-xl shadow-2xl flex-1 max-h-[580px] overflow-y-auto">
-            <AgentConsole />
+        {/* Right Column: AI Investigation Agent Console */}
+        {workspaceMode !== "graph_focus" && (
+          <div
+            className={`min-w-0 flex flex-col ${
+              workspaceMode === "agent_focus"
+                ? "lg:col-span-8"
+                : "lg:col-span-4"
+            }`}
+          >
+            <div className="rounded-2xl border border-white/10 bg-midnight/80 p-3 sm:p-3.5 backdrop-blur-xl shadow-2xl flex-1 min-h-[600px] max-h-[680px] overflow-y-auto">
+              <AgentConsole
+                isExpanded={workspaceMode === "agent_focus"}
+                onToggleExpand={() =>
+                  setWorkspaceMode((prev) => (prev === "agent_focus" ? "tri_pane" : "agent_focus"))
+                }
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Lower Deck View Switcher Ribbon */}

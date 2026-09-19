@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Brain,
   BarChart3,
+  LayoutDashboard,
   PhoneCall,
   Database,
   Sparkles,
@@ -821,8 +822,8 @@ export default function Navbar() {
                   Primary Views
                 </div>
                 {[
-                  { label: "Demo", href: "/overview", icon: Sparkles },
                   { label: "Investigation", href: "/investigation", icon: Brain },
+                  { label: "Dashboard", href: "/overview", icon: LayoutDashboard },
                   { label: "Telecom CDR", href: "/telecom", icon: PhoneCall },
                   { label: "Landing", href: "/", icon: Shield },
                 ].map((link) => {
@@ -909,23 +910,6 @@ export default function Navbar() {
         <div className="hidden lg:flex items-center justify-center">
           <NavigationMenu className="max-w-none">
             <NavigationMenuList className="flex items-center gap-1 rounded-full border border-purple-500/20 bg-[#0c0c16]/90 p-1 shadow-2xl backdrop-blur-2xl">
-              {/* Demo */}
-              <NavigationMenuItem>
-                <Link href="/overview" legacyBehavior passHref>
-                  <NavigationMenuLink
-                    className={cn(
-                      "whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all",
-                      pathname === "/overview"
-                        ? "bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white shadow-brand-glow font-bold"
-                        : "text-white/70 hover:text-white hover:bg-white/[0.08]"
-                    )}
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>Demo</span>
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-
               {/* Investigation */}
               <NavigationMenuItem>
                 <Link href="/investigation" legacyBehavior passHref>
@@ -939,6 +923,23 @@ export default function Navbar() {
                   >
                     <Brain className="h-3.5 w-3.5" />
                     <span>Investigation</span>
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+
+              {/* Dashboard */}
+              <NavigationMenuItem>
+                <Link href="/overview" legacyBehavior passHref>
+                  <NavigationMenuLink
+                    className={cn(
+                      "whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all",
+                      pathname === "/overview" || pathname === "/dashboard"
+                        ? "bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white shadow-brand-glow font-bold"
+                        : "text-white/70 hover:text-white hover:bg-white/[0.08]"
+                    )}
+                  >
+                    <LayoutDashboard className="h-3.5 w-3.5" />
+                    <span>Dashboard</span>
                   </NavigationMenuLink>
                 </Link>
               </NavigationMenuItem>
