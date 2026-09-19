@@ -245,29 +245,43 @@ class SafeToolExecutor:
         limit = min(args.get("limit", 20), 50)
 
         # Resolve UUID if record_id passed
-        c = self.db.query(Crime).filter(or_(Crime.id == crime_id, Crime.record_id == crime_id)).first()
+        c = self.db.query(Crime).filter(or_(Crime.id == crime_id, Crime.record_id == crime_id)).first() if crime_id else None
         target_uuid = c.id if c else crime_id
 
         graph_res = GraphQueryService.find_connected_crimes(target_uuid, max_hops=max_hops, limit=limit)
-        connected = graph_res.get("connected_crimes", [])
+        if isinstance(graph_res, list):
+            connected = graph_res
+        elif isinstance(graph_res, dict):
+            connected = graph_res.get("connected_crimes") or graph_res.get("connections") or []
+        else:
+            connected = []
 
         evidence_items: List[NormalizedEvidence] = []
         for item in connected:
-            rel_val_status = item.get("validation_status", "AI_DERIVED")
-            source_lbl = c.record_id if c else crime_id
-            target_lbl = item.get("record_id") or item.get("crime_id")
+            if not isinstance(item, dict):
+                continue
+            rel_val_status = item.get("validation_status") or "AI_DERIVED"
+            source_lbl = str((c.record_id if c else None) or crime_id or "UNKNOWN")
+            c_id = str(item.get("crime_id") or "")
+            target_lbl = str(item.get("record_id") or item.get("crime_id") or "UNKNOWN")
+            evidence_id = f"GraphEdge-{c_id[:8]}" if c_id else f"GraphEdge-{target_lbl[:8]}"
+            rel_type = item.get("relationship") or item.get("link_type") or "CONNECTED_TO"
+            shared_count = item.get("shared_entities_count", 1)
+            shared_types = item.get("shared_types") or item.get("intermediate_entity") or "general"
+            citation = f"GraphEdge-{target_lbl[:8]}"
+
             evidence_items.append(NormalizedEvidence(
-                evidence_id=f"GraphEdge-{item.get('crime_id', '')[:8]}",
+                evidence_id=evidence_id,
                 evidence_type="GRAPH_EDGE",
                 source_system="NEO4J",
-                source_record_id=item.get("crime_id"),
+                source_record_id=c_id,
                 source_entity=source_lbl,
                 target_entity=target_lbl,
-                relationship=item.get("link_type") or "CONNECTED_TO",
-                summary=f"Graph link to Case {target_lbl} via {item.get('shared_entities_count', 1)} shared elements ({item.get('shared_types', 'general')})",
-                confidence=float(item.get("confidence", 0.8)),
+                relationship=rel_type,
+                summary=f"Graph link to Case {target_lbl} via {shared_count} shared elements ({shared_types})",
+                confidence=float(item.get("confidence") or 0.8),
                 validation_status=rel_val_status,
-                citation=f"GraphEdge-{target_lbl[:8]}",
+                citation=citation,
                 tool_used="graph_connections",
                 metadata=item
             ))
@@ -278,12 +292,12 @@ class SafeToolExecutor:
     # Tool 5: graph_paths
     # -------------------------------------------------------------------------
     async def _run_graph_paths(self, args: Dict[str, Any]) -> Tuple[Dict[str, Any], List[NormalizedEvidence]]:
-        source_id = args.get("source_id")
-        target_id = args.get("target_id")
+        source_id = str(args.get("source_id") or "")
+        target_id = str(args.get("target_id") or "")
         max_depth = min(args.get("max_depth", 3), 4)
 
         paths = []
-        if not Neo4jService.is_fallback_mode():
+        if not Neo4jService.is_fallback_mode() and source_id and target_id:
             driver = Neo4jService.get_driver()
             if driver:
                 query = f"""
@@ -418,18 +432,20 @@ class SafeToolExecutor:
                 "validation_status": val_st
             }
             associations.append(item)
+            ca_id_str = str(ca.id or "")
+            p_num_str = str(item.get("phone_number") or "")
             evidence_items.append(NormalizedEvidence(
-                evidence_id=f"PhoneAssoc-{ca.id[:8]}",
+                evidence_id=f"PhoneAssoc-{ca_id_str[:8]}",
                 evidence_type="PHONE",
                 source_system="POSTGRESQL",
-                source_record_id=ca.id,
+                source_record_id=ca_id_str,
                 source_entity=p_lbl,
                 target_entity=c_lbl,
                 relationship="USED_IN_CRIME",
                 summary=f"Phone {item['phone_number']} linked to Case {item['crime_id']} (Role: {item['role']})",
                 confidence=getattr(ca, "confidence", 0.85),
                 validation_status=val_st,
-                citation=f"PhoneRel-{item['phone_number'][-6:]}",
+                citation=f"PhoneRel-{p_num_str[-6:] if p_num_str else 'UNKNOWN'}",
                 tool_used="phone_connections",
                 metadata=item
             ))
@@ -446,18 +462,20 @@ class SafeToolExecutor:
                 "validation_status": val_st
             }
             associations.append(item)
+            pa_id_str = str(pa.id or "")
+            p_name_str = str(item.get("person_name") or "")
             evidence_items.append(NormalizedEvidence(
-                evidence_id=f"PersonPhone-{pa.id[:8]}",
+                evidence_id=f"PersonPhone-{pa_id_str[:8]}",
                 evidence_type="PHONE",
                 source_system="POSTGRESQL",
-                source_record_id=pa.id,
+                source_record_id=pa_id_str,
                 source_entity=item["person_name"],
                 target_entity=item["phone_number"],
                 relationship=pa.relationship_type or "USES_PHONE",
                 summary=f"Person {item['person_name']} uses phone {item['phone_number']}",
                 confidence=pa.confidence if hasattr(pa, "confidence") and pa.confidence else 0.9,
                 validation_status=val_st,
-                citation=f"PersonPhone-{item['person_name'][:6]}",
+                citation=f"PersonPhone-{p_name_str[:6] if p_name_str else 'UNKNOWN'}",
                 tool_used="phone_connections",
                 metadata=item
             ))
@@ -576,26 +594,57 @@ class SafeToolExecutor:
         c = self.db.query(Crime).filter(or_(Crime.id == scope_crime, Crime.record_id == scope_crime)).first() if scope_crime else None
         target_uuid = c.id if c else scope_crime
 
-        individuals = KeyIndividualService.get_key_individuals(
+        analysis_res = KeyIndividualService.get_key_individuals(
             db=self.db,
             scope_crime_id=target_uuid,
             limit=limit
         )
 
+        if isinstance(analysis_res, dict):
+            raw_individuals = analysis_res.get("items", [])
+        elif isinstance(analysis_res, list):
+            raw_individuals = analysis_res
+        else:
+            raw_individuals = []
+
+        individuals: List[Dict[str, Any]] = []
         evidence_items: List[NormalizedEvidence] = []
-        for ind in individuals:
+        for ind in raw_individuals:
+            if not isinstance(ind, dict):
+                continue
+            person_id = str(ind.get("person_id") or "UNKNOWN")
+            display_name = str(ind.get("display_name") or ind.get("canonical_name") or "Person")
+
+            metrics = ind.get("metrics") if isinstance(ind.get("metrics"), dict) else {}
+            degree = round(float(ind.get("degree_centrality") if ind.get("degree_centrality") is not None else metrics.get("degree_centrality", 0.0)), 4)
+            betweenness = round(float(ind.get("betweenness_centrality") if ind.get("betweenness_centrality") is not None else metrics.get("betweenness_centrality", 0.0)), 4)
+            pagerank = round(float(ind.get("pagerank") if ind.get("pagerank") is not None else metrics.get("pagerank", 0.0)), 4)
+
+            connected_crimes = ind.get("connected_crimes") or []
+            connected_phones = ind.get("connected_phones") or []
+
+            ind_flat = dict(ind)
+            ind_flat["person_id"] = person_id
+            ind_flat["display_name"] = display_name
+            ind_flat["degree_centrality"] = degree
+            ind_flat["betweenness_centrality"] = betweenness
+            ind_flat["pagerank"] = pagerank
+            ind_flat["connected_crimes"] = connected_crimes
+            ind_flat["connected_phones"] = connected_phones
+            individuals.append(ind_flat)
+
             evidence_items.append(NormalizedEvidence(
-                evidence_id=f"Centrality-{ind.get('person_id', '')[:8]}",
+                evidence_id=f"Centrality-{person_id[:8]}",
                 evidence_type="PERSON",
                 source_system="NEO4J",
-                source_record_id=ind.get("person_id"),
-                source_entity=ind.get("display_name"),
-                summary=f"Structurally central individual '{ind.get('display_name')}' (Degree: {ind.get('degree_centrality', 0.0)}, Betweenness: {ind.get('betweenness_centrality', 0.0)}, PageRank: {ind.get('pagerank', 0.0)})",
+                source_record_id=person_id,
+                source_entity=display_name,
+                summary=f"Structurally central individual '{display_name}' (Degree: {degree}, Betweenness: {betweenness}, PageRank: {pagerank})",
                 confidence=1.0,
                 validation_status="AI_DERIVED",
-                citation=f"Centrality-{ind.get('display_name', '')[:10]}",
+                citation=f"Centrality-{display_name[:10]}",
                 tool_used="key_individual_analysis",
-                metadata=ind
+                metadata=ind_flat
             ))
 
         return {"key_individuals": individuals, "total_ranked": len(individuals)}, evidence_items

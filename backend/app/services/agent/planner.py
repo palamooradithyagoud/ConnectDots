@@ -163,7 +163,7 @@ class InvestigationPlanner:
         Creates an investigation plan. Attempts LLM generation first, falling back to deterministic plan.
         """
         scope = cls.extract_scope_heuristics(question)
-        if user_scope:
+        if user_scope and isinstance(user_scope, dict):
             if user_scope.get("crime_id"):
                 scope.crime_id = user_scope["crime_id"]
             if user_scope.get("phone_number"):
