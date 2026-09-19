@@ -240,25 +240,24 @@ export default function Navbar() {
   if (isLandingPage) {
     return (
       <nav
-        className={`fixed top-0 left-0 right-0 z-[100] w-full transition-all duration-300 ${
+        className={`fixed z-[100] transition-all duration-500 ease-out ${
           scrolled
-            ? "bg-white/95 backdrop-blur-md shadow-lg py-2.5"
-            : "bg-transparent pt-3.5 pb-2"
+            ? "top-3 sm:top-4 left-1/2 -translate-x-1/2 w-[94%] max-w-[1320px] rounded-full border border-purple-500/30 bg-[#080714]/92 backdrop-blur-2xl shadow-[0_16px_45px_rgba(0,0,0,0.85),0_0_30px_rgba(223,0,149,0.18)] px-4 sm:px-6 py-2"
+            : "top-0 left-0 right-0 w-full bg-transparent pt-3.5 pb-2"
         }`}
       >
-        <div
-          className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ease-in-out bg-white/95 backdrop-blur-md shadow-lg ${
-            scrolled ? "opacity-100" : "opacity-0"
-          }`}
-        />
-        <div className="relative mx-auto transition-all duration-500 ease-in-out w-full max-w-[1400px] xl:max-w-[1500px] 2xl:max-w-[1600px] px-6">
+        <div className={`relative mx-auto transition-all duration-500 ease-in-out w-full ${
+          scrolled ? "max-w-full px-1" : "max-w-[1400px] xl:max-w-[1500px] 2xl:max-w-[1600px] px-6"
+        }`}>
           {/* Desktop Navbar Row */}
           <div className="relative hidden lg:flex w-full items-center justify-between">
-            {/* Left: Techsnap-style Logo (15% width) */}
+            {/* Left: Logo */}
             <div className="flex items-center justify-start w-[15%] min-w-[180px] shrink-0">
               <Link href="/" className="flex items-center gap-2.5 group">
                 <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-tr from-[#df0095] via-purple-600 to-violet-600 p-0.5 shadow-md group-hover:scale-105 transition-transform duration-300">
-                  <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-white">
+                  <div className={`flex h-full w-full items-center justify-center rounded-[10px] ${
+                    scrolled ? "bg-[#0d0d18]" : "bg-white"
+                  }`}>
                     <Image
                       src="/logo.png"
                       alt="ConnectDots"
@@ -270,19 +269,27 @@ export default function Navbar() {
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xl font-black tracking-tight text-slate-950 font-sans leading-none">
+                  <span className={`text-xl font-black tracking-tight font-sans leading-none transition-colors ${
+                    scrolled ? "text-white" : "text-slate-950"
+                  }`}>
                     Connect<span className="text-[#df0095]">Dots</span>
                   </span>
-                  <span className="text-[0.6rem] font-bold tracking-wider text-slate-500 uppercase mt-0.5">
+                  <span className={`text-[0.6rem] font-bold tracking-wider uppercase mt-0.5 transition-colors ${
+                    scrolled ? "text-violet-300/70 font-mono" : "text-slate-500"
+                  }`}>
                     Snap the crime
                   </span>
                 </div>
               </Link>
             </div>
 
-            {/* Center: Techsnap White Pill Menu (Centered inside 70% black arch zone with generous padding) */}
+            {/* Center: Pill Menu */}
             <div className="w-[70%] flex justify-center items-center shrink-0">
-              <div className="w-full max-w-[780px] flex py-1.5 px-3 rounded-full justify-evenly items-center space-x-1.5 bg-white text-black shadow-[0_2px_14px_rgba(0,0,0,0.18)] border border-slate-200/80">
+              <div className={`w-full max-w-[780px] flex py-1.5 px-3 rounded-full justify-evenly items-center space-x-1.5 transition-all duration-300 ${
+                scrolled
+                  ? "bg-white/[0.06] border border-white/10"
+                  : "bg-white text-black shadow-[0_2px_14px_rgba(0,0,0,0.18)] border border-slate-200/80"
+              }`}>
               {navDropdowns.map((dropdown) => {
                 const isOpen = openDropdown === dropdown.id;
                 return (
@@ -302,10 +309,12 @@ export default function Navbar() {
                           elem.scrollIntoView({ behavior: "smooth" });
                         }
                       }}
-                      className={`group/btn w-full justify-center flex items-center text-xs px-3 py-2.5 rounded-full font-semibold transition-all duration-300 whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.18)] cursor-pointer select-none ${
+                      className={`group/btn w-full justify-center flex items-center text-xs px-3 py-2 rounded-full font-semibold transition-all duration-300 whitespace-nowrap cursor-pointer select-none ${
                         isOpen
-                          ? "bg-[#df0095] text-white"
-                          : "bg-white text-slate-900 group-hover:bg-[#df0095] group-hover:text-white"
+                          ? "bg-[#df0095] text-white shadow-[0_0_12px_rgba(223,0,149,0.5)]"
+                          : scrolled
+                            ? "text-white/80 hover:text-white hover:bg-white/10"
+                            : "bg-white text-slate-900 group-hover:bg-[#df0095] group-hover:text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
                       }`}
                     >
                       <span>{dropdown.label}</span>
@@ -316,33 +325,44 @@ export default function Navbar() {
                       />
                     </a>
 
-                    {/* Rich Floating Dropdown Card (Supports both pure CSS group-hover and React state) */}
+                    {/* Rich Floating Dropdown Card (Solid White Background with Zero Transparency) */}
                     <div
-                      className={`absolute left-1/2 -translate-x-1/2 top-full pt-2 w-72 z-50 transition-all duration-200 ${
+                      className={`absolute left-1/2 -translate-x-1/2 top-full pt-2.5 w-72 z-50 transition-all duration-200 ${
                         isOpen
                           ? "block opacity-100 visible"
                           : "hidden group-hover:block group-hover:opacity-100 group-hover:visible"
                       }`}
                     >
-                      <div className="rounded-2xl border border-slate-100 bg-white p-2.5 shadow-2xl space-y-1">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)] space-y-1">
                           {dropdown.items.map((subItem, idx) => {
                             const SubIcon = subItem.icon;
                             return (
                               <Link
                                 key={idx}
                                 href={subItem.href}
+                                onClick={(e) => {
+                                  if (subItem.href.startsWith("#")) {
+                                    const targetId = subItem.href.replace("#", "");
+                                    const elem = document.getElementById(targetId);
+                                    if (elem) {
+                                      e.preventDefault();
+                                      elem.scrollIntoView({ behavior: "smooth" });
+                                      setOpenDropdown(null);
+                                    }
+                                  }
+                                }}
                                 className="group/item flex items-start gap-3 rounded-xl p-2.5 hover:bg-slate-50 transition-colors"
                               >
-                                <div className="p-2 rounded-lg bg-slate-100 text-slate-700 group-hover/item:bg-[#df0095]/10 group-hover/item:text-[#df0095] transition-colors shrink-0 mt-0.5">
+                                <div className="p-2 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 group-hover/item:bg-[#df0095]/10 group-hover/item:text-[#df0095] group-hover/item:border-[#df0095]/30 transition-colors shrink-0 mt-0.5">
                                   <SubIcon className="h-4 w-4" />
                                 </div>
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 text-left">
                                   <div className="flex items-center justify-between gap-1">
                                     <span className="text-xs font-bold text-slate-900 group-hover/item:text-[#df0095] transition-colors">
                                       {subItem.title}
                                     </span>
                                     {subItem.badge && (
-                                      <span className="text-[0.6rem] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600">
+                                      <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
                                         {subItem.badge}
                                       </span>
                                     )}
@@ -362,7 +382,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Right: Demo Action Button (Centered nicely in the white shoulder) */}
+            {/* Right: Demo Action Button */}
             <div className="flex w-[15%] min-w-[180px] justify-center items-center shrink-0">
               <Link
                 href="/overview"
@@ -377,11 +397,15 @@ export default function Navbar() {
           <div className="relative lg:hidden flex w-full items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-[#df0095] to-violet-600 p-0.5">
-                <div className="flex h-full w-full items-center justify-center rounded-md bg-white">
+                <div className={`flex h-full w-full items-center justify-center rounded-md ${
+                  scrolled ? "bg-[#0d0d18]" : "bg-white"
+                }`}>
                   <Image src="/logo.png" alt="ConnectDots" width={22} height={22} className="object-contain" />
                 </div>
               </div>
-              <span className="text-lg font-black tracking-tight text-slate-950 font-sans">
+              <span className={`text-lg font-black tracking-tight font-sans transition-colors ${
+                scrolled ? "text-white" : "text-slate-950"
+              }`}>
                 Connect<span className="text-[#df0095]">Dots</span>
               </span>
             </Link>
@@ -389,13 +413,17 @@ export default function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/overview"
-                className="px-3.5 py-1.5 bg-[#df0095] text-white rounded-full text-xs font-bold shadow-sm"
+                className="px-3.5 py-1.5 bg-gradient-to-r from-[#e002a2] to-[#df0095] text-white rounded-full text-xs font-bold shadow-brand-glow"
               >
                 Demo
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-full bg-white border border-slate-200 text-slate-800 shadow-sm hover:bg-slate-50 transition-colors"
+                className={`p-2 rounded-full border shadow-sm transition-colors ${
+                  scrolled
+                    ? "bg-[#0d0d18] border-white/10 text-white hover:bg-white/10"
+                    : "bg-white border-slate-200 text-slate-800 hover:bg-slate-50"
+                }`}
                 aria-label="Toggle Menu"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -403,13 +431,13 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Mobile Drawer Menu */}
+          {/* Mobile Drawer Menu (Solid White Background with Zero Transparency) */}
           {mobileMenuOpen && (
-            <div className="lg:hidden mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="lg:hidden mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl space-y-4 max-h-[80vh] overflow-y-auto text-slate-900">
               <div className="space-y-1 divide-y divide-slate-100">
                 {navDropdowns.map((dropdown) => (
                   <div key={dropdown.id} className="pt-2">
-                    <span className="text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider px-2">
+                    <span className="text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider px-2 font-mono">
                       {dropdown.label}
                     </span>
                     <div className="mt-1 space-y-1">
@@ -417,7 +445,8 @@ export default function Navbar() {
                         <Link
                           key={idx}
                           href={item.href}
-                          className="flex items-center justify-between p-2 rounded-lg text-xs font-semibold text-slate-800 hover:bg-slate-50 hover:text-[#df0095]"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center justify-between p-2 rounded-lg text-xs font-semibold text-slate-800 hover:bg-slate-50 hover:text-[#df0095] transition-colors"
                         >
                           <span>{item.title}</span>
                           <ArrowRight className="h-3 w-3 text-slate-400" />
@@ -431,6 +460,7 @@ export default function Navbar() {
               <div className="pt-3 border-t border-slate-100 flex">
                 <Link
                   href="/overview"
+                  onClick={() => setMobileMenuOpen(false)}
                   className="w-full text-center py-3 rounded-full bg-gradient-to-r from-[#e002a2] via-[#df0095] to-[#c20084] text-white text-sm font-black uppercase tracking-wider shadow-md"
                 >
                   Launch Demo Dashboard
