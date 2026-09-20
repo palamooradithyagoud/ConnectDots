@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = "postgresql://postgres:CHANGE_ME@localhost:5432/crime_db"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        if isinstance(v, str) and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
     
     # CORS
     BACKEND_CORS_ORIGINS: Union[List[str], str] = [
@@ -17,6 +24,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
+        "https://connectdots.antideploy.com",
+        "http://connectdots.antideploy.com",
+        "*",
     ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")
